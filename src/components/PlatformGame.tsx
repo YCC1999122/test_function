@@ -274,12 +274,20 @@ const PlatformGame = ({ onEnterBirthday }: { onEnterBirthday: () => void }) => {
 
   useEffect(() => {
     const updateScale = () => {
-      const containerWidth = Math.min(window.innerWidth - 32, CANVAS_WIDTH);
-      setScale(containerWidth / CANVAS_WIDTH);
+      const availableWidth = window.innerWidth - 32;
+      const availableHeight = window.innerHeight - 240;
+      const scaleByWidth = availableWidth / CANVAS_WIDTH;
+      const scaleByHeight = availableHeight / CANVAS_HEIGHT;
+      const newScale = Math.min(scaleByWidth, scaleByHeight, 1);
+      setScale(newScale > 0.1 ? newScale : 0.1);
     };
     updateScale();
     window.addEventListener('resize', updateScale);
-    return () => window.removeEventListener('resize', updateScale);
+    window.addEventListener('orientationchange', updateScale);
+    return () => {
+      window.removeEventListener('resize', updateScale);
+      window.removeEventListener('orientationchange', updateScale);
+    };
   }, []);
 
   const resetLevel = useCallback((levelIndex: number) => {
@@ -876,15 +884,15 @@ const PlatformGame = ({ onEnterBirthday }: { onEnterBirthday: () => void }) => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-deep-blue to-charcoal flex flex-col items-center justify-center p-4">
-      <div className="mb-4 text-center">
-        <h1 className="text-3xl md:text-4xl font-bold text-white font-display mb-2">
+    <div className="min-h-screen bg-gradient-to-b from-deep-blue to-charcoal flex flex-col items-center justify-start p-2 md:p-4 md:justify-center">
+      <div className="mb-2 md:mb-4 text-center">
+        <h1 className="text-xl md:text-4xl font-bold text-white font-display mb-1 md:mb-2">
           <span className="gradient-text">冒险之旅</span>
         </h1>
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex items-center justify-center gap-2 md:gap-4 text-xs md:text-base">
           <p className="text-silver-gray">关卡 {currentLevel + 1} / {MAX_LEVELS}</p>
           <div className="flex items-center gap-1">
-            <Star className="w-4 h-4 text-yellow-400" />
+            <Star className="w-3 h-3 md:w-4 md:h-4 text-yellow-400" />
             <span className="text-white font-bold">{collectedStars} / {LEVELS[currentLevel].stars.length}</span>
           </div>
           {LEVELS[currentLevel].bosses.length > 0 && (
@@ -971,7 +979,7 @@ const PlatformGame = ({ onEnterBirthday }: { onEnterBirthday: () => void }) => {
         </div>
       </div>
 
-      <div className="mt-4 md:hidden flex gap-6 select-none">
+      <div className="mt-3 md:hidden flex gap-4 select-none justify-center">
         <button
           onTouchStart={handleTouchStart('left')}
           onTouchEnd={handleTouchEnd('left')}
@@ -979,10 +987,10 @@ const PlatformGame = ({ onEnterBirthday }: { onEnterBirthday: () => void }) => {
           onMouseDown={handleTouchStart('left')}
           onMouseUp={handleTouchEnd('left')}
           onMouseLeave={handleTouchEnd('left')}
-          className="w-20 h-20 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
+          className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
           style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
         >
-          <ArrowLeft className="w-8 h-8" />
+          <ArrowLeft className="w-6 h-6" />
         </button>
         <button
           onTouchStart={handleTouchStart('jump')}
@@ -991,10 +999,10 @@ const PlatformGame = ({ onEnterBirthday }: { onEnterBirthday: () => void }) => {
           onMouseDown={handleTouchStart('jump')}
           onMouseUp={handleTouchEnd('jump')}
           onMouseLeave={handleTouchEnd('jump')}
-          className="w-20 h-20 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
+          className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
           style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
         >
-          <ArrowUp className="w-8 h-8" />
+          <ArrowUp className="w-6 h-6" />
         </button>
         <button
           onTouchStart={handleTouchStart('right')}
@@ -1003,36 +1011,36 @@ const PlatformGame = ({ onEnterBirthday }: { onEnterBirthday: () => void }) => {
           onMouseDown={handleTouchStart('right')}
           onMouseUp={handleTouchEnd('right')}
           onMouseLeave={handleTouchEnd('right')}
-          className="w-20 h-20 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
+          className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
           style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
         >
-          <ArrowRight className="w-8 h-8" />
+          <ArrowRight className="w-6 h-6" />
         </button>
       </div>
 
       {isPlaying && (
-        <div className="mt-6 flex gap-4">
+        <div className="mt-3 md:mt-6 flex gap-2 md:gap-4">
           <button
             onClick={() => setIsPlaying(false)}
-            className="flex items-center gap-2 px-4 py-2 glass-effect rounded-full text-silver-gray hover:text-neon-blue transition-colors"
+            className="flex items-center gap-1 md:gap-2 px-3 md:px-4 py-1 md:py-2 glass-effect rounded-full text-silver-gray hover:text-neon-blue transition-colors text-xs md:text-base"
           >
             暂停
           </button>
           <button
             onClick={handleRestart}
-            className="flex items-center gap-2 px-4 py-2 glass-effect rounded-full text-silver-gray hover:text-neon-blue transition-colors"
+            className="flex items-center gap-1 md:gap-2 px-3 md:px-4 py-1 md:py-2 glass-effect rounded-full text-silver-gray hover:text-neon-blue transition-colors text-xs md:text-base"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-3 h-3 md:w-4 md:h-4" />
             重新开始
           </button>
         </div>
       )}
 
-      <div className="mt-8 flex gap-2">
+      <div className="mt-4 md:mt-8 flex gap-2">
         {Array.from({ length: MAX_LEVELS }).map((_, index) => (
           <div
             key={index}
-            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+            className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all duration-300 ${
               index < currentLevel
                 ? 'bg-neon-blue shadow-lg shadow-neon-blue/50'
                 : index === currentLevel
