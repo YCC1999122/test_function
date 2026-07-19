@@ -864,13 +864,16 @@ const PlatformGame = ({ onEnterBirthday }: { onEnterBirthday: () => void }) => {
     setIsPlaying(true);
   };
 
-  const handleTouchMove = useCallback((direction: 'left' | 'right' | 'jump') => {
+  const handleTouchStart = useCallback((direction: 'left' | 'right' | 'jump') => (e: React.TouchEvent | React.MouseEvent) => {
+    e.preventDefault();
     if (!isPlayingRef.current || showLevelComplete || showBirthdayMenu) return;
     keysRef.current.add(direction);
-    setTimeout(() => {
-      keysRef.current.delete(direction);
-    }, 150);
   }, [showLevelComplete, showBirthdayMenu]);
+
+  const handleTouchEnd = useCallback((direction: 'left' | 'right' | 'jump') => (e: React.TouchEvent | React.MouseEvent) => {
+    e.preventDefault();
+    keysRef.current.delete(direction);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-deep-blue to-charcoal flex flex-col items-center justify-center p-4">
@@ -968,25 +971,40 @@ const PlatformGame = ({ onEnterBirthday }: { onEnterBirthday: () => void }) => {
         </div>
       </div>
 
-      <div className="mt-4 md:hidden flex gap-4">
+      <div className="mt-4 md:hidden flex gap-6 select-none">
         <button
-          onTouchStart={() => handleTouchMove('left')}
-          onMouseDown={() => handleTouchMove('left')}
-          className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/30 transition-colors"
+          onTouchStart={handleTouchStart('left')}
+          onTouchEnd={handleTouchEnd('left')}
+          onTouchCancel={handleTouchEnd('left')}
+          onMouseDown={handleTouchStart('left')}
+          onMouseUp={handleTouchEnd('left')}
+          onMouseLeave={handleTouchEnd('left')}
+          className="w-20 h-20 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
+          style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
         >
           <ArrowLeft className="w-8 h-8" />
         </button>
         <button
-          onTouchStart={() => handleTouchMove('jump')}
-          onMouseDown={() => handleTouchMove('jump')}
-          className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/30 transition-colors"
+          onTouchStart={handleTouchStart('jump')}
+          onTouchEnd={handleTouchEnd('jump')}
+          onTouchCancel={handleTouchEnd('jump')}
+          onMouseDown={handleTouchStart('jump')}
+          onMouseUp={handleTouchEnd('jump')}
+          onMouseLeave={handleTouchEnd('jump')}
+          className="w-20 h-20 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
+          style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
         >
           <ArrowUp className="w-8 h-8" />
         </button>
         <button
-          onTouchStart={() => handleTouchMove('right')}
-          onMouseDown={() => handleTouchMove('right')}
-          className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/30 transition-colors"
+          onTouchStart={handleTouchStart('right')}
+          onTouchEnd={handleTouchEnd('right')}
+          onTouchCancel={handleTouchEnd('right')}
+          onMouseDown={handleTouchStart('right')}
+          onMouseUp={handleTouchEnd('right')}
+          onMouseLeave={handleTouchEnd('right')}
+          className="w-20 h-20 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
+          style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
         >
           <ArrowRight className="w-8 h-8" />
         </button>
