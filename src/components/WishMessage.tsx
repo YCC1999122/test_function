@@ -230,7 +230,7 @@ const WishMessage = () => {
                   </span>
                   {isClicked && (
                     <span className="text-xs animate-bounce" style={{ color: item.color }}>
-                      ✨ {['惊喜满满!', '太棒了!', '继续加油!', '爱你!', '闪闪发光!', '美好无限!'][index]}
+                      ✨ {['惊喜满满!', '太棒了!', '继续加油!', '热爱!', '闪闪发光!', '美好无限!'][index]}
                     </span>
                   )}
                 </button>
