@@ -5,7 +5,11 @@ class GameAudio {
   private bgmInterval: number | null = null;
   private isBgmPlaying = false;
 
-  private getContext(): AudioContext {
+  setContext(ctx: AudioContext) {
+    this.audioContext = ctx;
+  }
+
+  getContext(): AudioContext {
     if (!this.audioContext) {
       this.audioContext = new AudioContext();
     }
@@ -204,38 +208,80 @@ class GameAudio {
     }
   }
 
-  playFirework() {
+  playFirework(baseFreq?: number) {
     const ctx = this.getContext();
+    const now = ctx.currentTime;
+    const duration = 0.5;
     
-    const osc1 = ctx.createOscillator();
-    const osc2 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    const gain2 = ctx.createGain();
+    const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+    const noiseData = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < noiseData.length; i++) {
+      noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.3));
+    }
     
-    osc1.connect(gain1);
-    osc2.connect(gain2);
-    gain1.connect(ctx.destination);
-    gain2.connect(ctx.destination);
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'lowpass';
+    noiseFilter.frequency.setValueAtTime(2000, now);
+    noiseFilter.frequency.exponentialRampToValueAtTime(200, now + duration);
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.15, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
     
-    osc1.type = 'triangle';
-    osc2.type = 'sine';
+    noiseSource.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noiseSource.start(now);
     
-    osc1.frequency.setValueAtTime(800 + Math.random() * 400, ctx.currentTime);
-    osc1.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.3);
+    const frequencies = baseFreq 
+      ? [baseFreq * 2, baseFreq * 3, baseFreq * 4, baseFreq * 1.5, baseFreq * 0.5]
+      : [400, 600, 800, 1000, 1200];
     
-    osc2.frequency.setValueAtTime(1200 + Math.random() * 600, ctx.currentTime);
-    osc2.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.4);
+    frequencies.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const detune = (Math.random() - 0.5) * 50;
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+      osc.frequency.setValueAtTime(freq + detune, now);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.3, now + duration * (0.8 + Math.random() * 0.4));
+      
+      const startTime = now + Math.random() * 0.05;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.08 + Math.random() * 0.06, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration * (0.6 + Math.random() * 0.4));
+      
+      osc.start(now);
+      osc.stop(now + duration + 0.1);
+    });
     
-    gain1.gain.setValueAtTime(0.15, ctx.currentTime);
-    gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-    
-    gain2.gain.setValueAtTime(0.1, ctx.currentTime);
-    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-    
-    osc1.start(ctx.currentTime);
-    osc2.start(ctx.currentTime);
-    osc1.stop(ctx.currentTime + 0.3);
-    osc2.stop(ctx.currentTime + 0.4);
+    const sparkleCount = 8;
+    for (let i = 0; i < sparkleCount; i++) {
+      setTimeout(() => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        const sparkleFreq = baseFreq 
+          ? baseFreq * (2 + Math.random() * 3)
+          : 800 + Math.random() * 800;
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(sparkleFreq, ctx.currentTime);
+        
+        gain.gain.setValueAtTime(0.02, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+        
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.1);
+      }, Math.random() * 300);
+    }
   }
 
   playPop() {
@@ -278,7 +324,7 @@ export const useGameAudio = () => {
   const land = useCallback(() => audioRef.current.playLand(), []);
   const startBGM = useCallback(() => audioRef.current.startBGM(), []);
   const stopBGM = useCallback(() => audioRef.current.stopBGM(), []);
-  const firework = useCallback(() => audioRef.current.playFirework(), []);
+  const firework = useCallback((baseFreq?: number) => audioRef.current.playFirework(baseFreq), []);
   const pop = useCallback(() => audioRef.current.playPop(), []);
 
   return { jump, star, hit, levelComplete, victory, select, land, startBGM, stopBGM, firework, pop };

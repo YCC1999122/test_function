@@ -113,7 +113,7 @@ const ParticleBackground = () => {
       });
     };
 
-    const spawnFirework = () => {
+    const spawnFirework = (baseFreq?: number) => {
       const cx = Math.random() * canvas.width;
       const cy = Math.random() * canvas.height * 0.6;
       const color = COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -132,7 +132,7 @@ const ParticleBackground = () => {
           size: 2 + Math.random() * 3,
         });
       }
-      firework();
+      firework(baseFreq);
     };
 
     const drawStar = (x: number, y: number, size: number, color: string, opacity: number) => {
@@ -385,15 +385,7 @@ const ParticleBackground = () => {
         spawnWish();
       }
 
-      if (time % 60 === 0 && Math.random() > 0.2) {
-        spawnFirework();
-      }
-
-      if (time % 30 === 0 && Math.random() > 0.5) {
-        spawnFirework();
-      }
-
-      if (beatPulse > 0.3 && Math.random() > 0.5) {
+      if (time % 200 === 0 && Math.random() > 0.7) {
         spawnFirework();
       }
 
@@ -405,8 +397,14 @@ const ParticleBackground = () => {
       mouse.y = e.clientY;
     };
 
-    const handleBeat = () => {
+    const handleBeat = (e: Event) => {
       beatPulse = 1;
+      const detail = (e as CustomEvent).detail;
+      if (detail && detail.freq) {
+        if (Math.random() > 0.3) {
+          spawnFirework(detail.freq);
+        }
+      }
     };
 
     resizeCanvas();
