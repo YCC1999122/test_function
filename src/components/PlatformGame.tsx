@@ -308,6 +308,7 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     bossesRef.current = level.bosses.map((b) => ({ ...b }));
     collectedStarsRef.current = 0;
     setCollectedStars(0);
+    keysRef.current.clear();
   }, []);
 
   const checkCollision = useCallback((player: Player, platform: Platform): boolean => {
