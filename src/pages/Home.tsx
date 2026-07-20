@@ -11,7 +11,7 @@ export default function Home() {
     <div className="relative min-h-screen">
       <ParticleBackground />
       <ShareButton />
-      <MusicPlayer />
+      <MusicPlayer autoPlay />
 
       <div className="relative z-10">
         <HeroSection />

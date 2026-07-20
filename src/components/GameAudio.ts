@@ -203,6 +203,59 @@ class GameAudio {
       this.bgmInterval = null;
     }
   }
+
+  playFirework() {
+    const ctx = this.getContext();
+    
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    const gain2 = ctx.createGain();
+    
+    osc1.connect(gain1);
+    osc2.connect(gain2);
+    gain1.connect(ctx.destination);
+    gain2.connect(ctx.destination);
+    
+    osc1.type = 'triangle';
+    osc2.type = 'sine';
+    
+    osc1.frequency.setValueAtTime(800 + Math.random() * 400, ctx.currentTime);
+    osc1.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.3);
+    
+    osc2.frequency.setValueAtTime(1200 + Math.random() * 600, ctx.currentTime);
+    osc2.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.4);
+    
+    gain1.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    
+    gain2.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+    
+    osc1.start(ctx.currentTime);
+    osc2.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 0.3);
+    osc2.stop(ctx.currentTime + 0.4);
+  }
+
+  playPop() {
+    const ctx = this.getContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600 + Math.random() * 800, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.15);
+    
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+    
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.15);
+  }
 }
 
 export const gameAudio = new GameAudio();
@@ -225,6 +278,8 @@ export const useGameAudio = () => {
   const land = useCallback(() => audioRef.current.playLand(), []);
   const startBGM = useCallback(() => audioRef.current.startBGM(), []);
   const stopBGM = useCallback(() => audioRef.current.stopBGM(), []);
+  const firework = useCallback(() => audioRef.current.playFirework(), []);
+  const pop = useCallback(() => audioRef.current.playPop(), []);
 
-  return { jump, star, hit, levelComplete, victory, select, land, startBGM, stopBGM };
+  return { jump, star, hit, levelComplete, victory, select, land, startBGM, stopBGM, firework, pop };
 };

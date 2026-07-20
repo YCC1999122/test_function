@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { AUTO_WISH_MESSAGES } from '../utils/constants';
+import { useGameAudio } from './GameAudio';
 
 interface Particle {
   x: number;
@@ -53,6 +54,7 @@ let beatPulse = 0;
 
 const ParticleBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { firework } = useGameAudio();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -130,6 +132,7 @@ const ParticleBackground = () => {
           size: 2 + Math.random() * 3,
         });
       }
+      firework();
     };
 
     const drawStar = (x: number, y: number, size: number, color: string, opacity: number) => {
