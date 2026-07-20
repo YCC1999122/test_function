@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { BIRTHDAY_DATE } from '../utils/constants';
+import { LUNAR_BIRTHDAY_MONTH, LUNAR_BIRTHDAY_DAY } from '../utils/constants';
+import { getNextBirthday, formatLunarDate, lunarToSolar } from '../utils/lunar';
 
 interface CountdownResult {
   days: number;
@@ -7,6 +8,7 @@ interface CountdownResult {
   minutes: number;
   seconds: number;
   isBirthday: boolean;
+  currentYear: number;
 }
 
 export const useCountdown = () => {
@@ -16,30 +18,25 @@ export const useCountdown = () => {
     minutes: 0,
     seconds: 0,
     isBirthday: false,
+    currentYear: new Date().getFullYear(),
   });
 
   const calculateCountdown = useCallback(() => {
     const now = new Date();
-    const targetDate = new Date(BIRTHDAY_DATE);
-    targetDate.setHours(0, 0, 0, 0);
+    const nextBirthday = getNextBirthday(LUNAR_BIRTHDAY_MONTH, LUNAR_BIRTHDAY_DAY);
+    
+    nextBirthday.setHours(0, 0, 0, 0);
 
-    const currentYear = now.getFullYear();
-    let birthdayThisYear = new Date(targetDate);
-    birthdayThisYear.setFullYear(currentYear);
+    const diff = nextBirthday.getTime() - now.getTime();
 
-    if (now > birthdayThisYear) {
-      birthdayThisYear.setFullYear(currentYear + 1);
-    }
-
-    const diff = birthdayThisYear.getTime() - now.getTime();
-
-    if (diff <= 0) {
+    if (diff <= 0 && diff > -86400000) {
       setCountdown({
         days: 0,
         hours: 0,
         minutes: 0,
         seconds: 0,
         isBirthday: true,
+        currentYear: nextBirthday.getFullYear(),
       });
       return;
     }
@@ -55,6 +52,7 @@ export const useCountdown = () => {
       minutes,
       seconds,
       isBirthday: false,
+      currentYear: nextBirthday.getFullYear(),
     });
   }, []);
 
@@ -66,4 +64,21 @@ export const useCountdown = () => {
   }, [calculateCountdown]);
 
   return countdown;
+};
+
+export const getBirthdayInfo = () => {
+  const now = new Date();
+  const nextBirthday = getNextBirthday(LUNAR_BIRTHDAY_MONTH, LUNAR_BIRTHDAY_DAY);
+  const birthdayYear = nextBirthday.getFullYear();
+  const solarDate = lunarToSolar(birthdayYear, LUNAR_BIRTHDAY_MONTH, LUNAR_BIRTHDAY_DAY);
+  
+  return {
+    solarYear: solarDate.getFullYear(),
+    solarMonth: solarDate.getMonth() + 1,
+    solarDay: solarDate.getDate(),
+    lunarYear: birthdayYear,
+    lunarMonth: LUNAR_BIRTHDAY_MONTH,
+    lunarDay: LUNAR_BIRTHDAY_DAY,
+    formattedLunar: formatLunarDate(birthdayYear, LUNAR_BIRTHDAY_MONTH, LUNAR_BIRTHDAY_DAY),
+  };
 };

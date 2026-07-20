@@ -1,4 +1,5 @@
-export const BIRTHDAY_DATE = new Date('2026-08-03');
+export const LUNAR_BIRTHDAY_MONTH = 6;
+export const LUNAR_BIRTHDAY_DAY = 21;
 export const LUNAR_DATE = '农历六月二十一';
 
 export const WISH_MESSAGES = [
