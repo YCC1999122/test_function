@@ -250,7 +250,7 @@ const WishMessage = () => {
             <br />
             愿每一个平凡的日子都闪烁着光芒，愿每一个梦想都绽放成花朵。
             <br />
-            愿你的世界永远充满色彩与希望！
+            愿你的世界永远充满色彩与希望，生日快乐！
           </p>
           <div className="flex justify-center gap-3 mt-6">
             {['🎂', '✨', '💫', '🌟', '🎉', '💖'].map((emoji, index) => (

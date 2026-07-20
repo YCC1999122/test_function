@@ -42,7 +42,7 @@ interface FireworkParticle {
 const COLORS = ['#00d4ff', '#9d4edd', '#ff6b9d', '#facc15', '#22d3ee', '#a855f7', '#ec4899', '#fbbf24', '#06b6d4', '#f97316'];
 
 const WISH_TEXTS = [
-  '特别时刻', 'Special Moment', '愿你永远闪耀', '岁岁平安', '心想事成',
+  '生日快乐', 'Happy Birthday', '愿你永远闪耀', '岁岁平安', '心想事成',
   '万事顺遂', '前程似锦', '笑口常开', '幸福美满', '梦想成真',
   '永远年轻', '永远热泪盈眶',
   '星光不负赶路人', '时光不负有心人', '所有美好如期而至',

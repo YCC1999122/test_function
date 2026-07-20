@@ -241,12 +241,12 @@ const LEVELS: Level[] = [
   },
 ];
 
-const PlatformGame = ({ onEnterBirthday }: { onEnterBirthday: () => void }) => {
+const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [currentLevel, setCurrentLevel] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showLevelComplete, setShowLevelComplete] = useState(false);
-  const [showBirthdayMenu, setShowBirthdayMenu] = useState(false);
+  const [showVictoryMenu, setShowVictoryMenu] = useState(false);
   const [collectedStars, setCollectedStars] = useState(0);
   const [scale, setScale] = useState(1);
 
@@ -759,7 +759,7 @@ const PlatformGame = ({ onEnterBirthday }: { onEnterBirthday: () => void }) => {
     });
 
     if (shouldShowBirthday) {
-      setShowBirthdayMenu(true);
+      setShowVictoryMenu(true);
       setIsPlaying(false);
       cancelAnimationFrame(animationRef.current);
       return;
@@ -816,7 +816,7 @@ const PlatformGame = ({ onEnterBirthday }: { onEnterBirthday: () => void }) => {
     if (!ctx) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isPlayingRef.current || showLevelComplete || showBirthdayMenu) return;
+      if (!isPlayingRef.current || showLevelComplete || showVictoryMenu) return;
       keysRef.current.add(e.key);
     };
 
@@ -832,7 +832,7 @@ const PlatformGame = ({ onEnterBirthday }: { onEnterBirthday: () => void }) => {
       window.removeEventListener('keyup', handleKeyUp);
       cancelAnimationFrame(animationRef.current);
     };
-  }, [showLevelComplete, showBirthdayMenu]);
+  }, [showLevelComplete, showVictoryMenu]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -868,15 +868,15 @@ const PlatformGame = ({ onEnterBirthday }: { onEnterBirthday: () => void }) => {
   const handleRestart = () => {
     resetLevel(currentLevel);
     setShowLevelComplete(false);
-    setShowBirthdayMenu(false);
+    setShowVictoryMenu(false);
     setIsPlaying(true);
   };
 
   const handleTouchStart = useCallback((direction: 'left' | 'right' | 'jump') => (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
-    if (!isPlayingRef.current || showLevelComplete || showBirthdayMenu) return;
+    if (!isPlayingRef.current || showLevelComplete || showVictoryMenu) return;
     keysRef.current.add(direction);
-  }, [showLevelComplete, showBirthdayMenu]);
+  }, [showLevelComplete, showVictoryMenu]);
 
   const handleTouchEnd = useCallback((direction: 'left' | 'right' | 'jump') => (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
@@ -926,7 +926,7 @@ const PlatformGame = ({ onEnterBirthday }: { onEnterBirthday: () => void }) => {
           className="border-2 border-neon-blue/30 rounded-lg shadow-lg shadow-neon-blue/20 block"
         />
 
-        {!isPlaying && !showLevelComplete && !showBirthdayMenu && (
+        {!isPlaying && !showLevelComplete && !showVictoryMenu && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 rounded-lg">
             <button
               onClick={handleStart}
@@ -957,7 +957,7 @@ const PlatformGame = ({ onEnterBirthday }: { onEnterBirthday: () => void }) => {
           </div>
         )}
 
-        {showBirthdayMenu && (
+        {showVictoryMenu && (
           <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-black/80 rounded-lg">
             <div className="text-center" style={{ width: '100%' }}>
               <Star className="w-20 h-20 text-yellow-400 mx-auto mb-4 animate-pulse" />
@@ -967,7 +967,7 @@ const PlatformGame = ({ onEnterBirthday }: { onEnterBirthday: () => void }) => {
               <p className="text-silver-gray mb-2">你收集了所有星星!</p>
               <p className="text-light-gray mb-8">这是给你的特别惊喜</p>
               <button
-                onClick={onEnterBirthday}
+                onClick={onCompleteGame}
                 className="inline-flex items-center gap-2 px-10 py-5 bg-gradient-to-r from-neon-blue via-neon-purple to-pink-500 text-white font-bold rounded-full hover:scale-110 transition-transform shadow-lg shadow-neon-blue/30"
               >
                 <Star className="w-6 h-6" />

@@ -41,7 +41,7 @@ const Countdown = () => {
     return (
       <div className="flex flex-col items-center animate-fade-in">
         <div className="text-neon-blue text-2xl font-semibold neon-text animate-pulse font-display">
-          🎉 今天就是特别的日子！ 🎉
+          🎉 今天就是生日啦！ 🎉
         </div>
         <div className="text-light-gray mt-2">
           {LUNAR_DATE}
@@ -53,7 +53,7 @@ const Countdown = () => {
   return (
     <div className="flex flex-col items-center">
       <div className="text-silver-gray text-sm mb-4">
-        2026年8月3日 {LUNAR_DATE}
+        生日：2026年8月3日 {LUNAR_DATE}
       </div>
       <div className="flex flex-wrap justify-center gap-4 md:gap-6">
         <CountdownCard value={days} label="天" delay={0.2} />
