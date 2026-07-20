@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { ArrowRight, ArrowLeft, ArrowUp, Trophy, Star, Play, RotateCcw } from 'lucide-react';
+import { useGameAudio } from './GameAudio';
 
 interface Player {
   x: number;
@@ -249,6 +250,8 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
   const [showVictoryMenu, setShowVictoryMenu] = useState(false);
   const [collectedStars, setCollectedStars] = useState(0);
   const [scale, setScale] = useState(1);
+
+  const { jump, star: playStarSound, hit, levelComplete, victory, select, startBGM, stopBGM } = useGameAudio();
 
   const playerRef = useRef<Player>({
     x: LEVELS[0].startX,
@@ -712,6 +715,7 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     if ((keys.has('ArrowUp') || keys.has('w') || keys.has(' ') || keys.has('jump')) && !player.isJumping) {
       player.velocityY = -12;
       player.isJumping = true;
+      jump();
     }
 
     player.velocityY += 0.5;
@@ -752,6 +756,7 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     stars.forEach((star) => {
       if (!star.collected && checkStarCollision(player, star)) {
         star.collected = true;
+        playStarSound();
         if (star.isSpecial && currentLevel === LEVELS.length - 1) {
           shouldShowBirthday = true;
         }
@@ -759,6 +764,7 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     });
 
     if (shouldShowBirthday) {
+      victory();
       setShowVictoryMenu(true);
       setIsPlaying(false);
       cancelAnimationFrame(animationRef.current);
@@ -780,6 +786,7 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     });
 
     if (hitByBoss) {
+      hit();
       const level = LEVELS[currentLevel];
       playerRef.current = {
         x: level.startX,
@@ -797,6 +804,7 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
 
     const allCollected = stars.every((s) => s.collected);
     if (allCollected && currentLevel < LEVELS.length - 1) {
+      levelComplete();
       setShowLevelComplete(true);
       setIsPlaying(false);
       cancelAnimationFrame(animationRef.current);
@@ -855,6 +863,7 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
   const handleStart = () => {
     resetLevel(currentLevel);
     setIsPlaying(true);
+    startBGM();
   };
 
   const handleNextLevel = () => {
@@ -863,6 +872,7 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     resetLevel(nextLevel);
     setShowLevelComplete(false);
     setIsPlaying(true);
+    startBGM();
   };
 
   const handleRestart = () => {
@@ -967,7 +977,7 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
               <p className="text-silver-gray mb-2">你收集了所有星星!</p>
               <p className="text-light-gray mb-8">这是给你的特别惊喜</p>
               <button
-                onClick={onCompleteGame}
+                onClick={() => { stopBGM(); onCompleteGame(); }}
                 className="inline-flex items-center gap-2 px-10 py-5 bg-gradient-to-r from-neon-blue via-neon-purple to-pink-500 text-white font-bold rounded-full hover:scale-110 transition-transform shadow-lg shadow-neon-blue/30"
               >
                 <Star className="w-6 h-6" />
