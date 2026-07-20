@@ -48,7 +48,7 @@ export default function App() {
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-8">
               <h2 className="text-xl md:text-2xl font-semibold text-white mb-2 font-display">
-                距离生日还有
+                距离那一天还有
               </h2>
               <div className="w-16 h-0.5 bg-gradient-to-r from-neon-blue to-neon-purple mx-auto rounded-full" />
             </div>

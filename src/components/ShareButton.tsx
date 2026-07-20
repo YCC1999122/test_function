@@ -10,8 +10,8 @@ const ShareButton = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: '生日祝福',
-          text: '快来看看这份特别的生日祝福！',
+          title: '特别时刻',
+          text: '快来看看这份特别的心意！',
           url: url,
         });
       } catch (err) {

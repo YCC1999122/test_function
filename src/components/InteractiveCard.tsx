@@ -160,11 +160,11 @@ const InteractiveCard = () => {
                   }}
                 >
                   <Sparkles className="w-12 h-12 mb-4" style={{ color: card.color }} />
-                  <h4 className="text-xl font-bold text-white mb-3 font-display">生日祝福</h4>
+                  <h4 className="text-xl font-bold text-white mb-3 font-display">特别祝福</h4>
                   <p className="text-light-gray text-center leading-relaxed">
                     {card.id === 1 && '愿你拥有所有想要的美好，每一天都充满惊喜！'}
                     {card.id === 2 && '愿你像星星一样闪耀，照亮自己也温暖他人！'}
-                    {card.id === 3 && '愿爱与幸福永远围绕着你，生日快乐！'}
+                    {card.id === 3 && '愿爱与幸福永远围绕着你，每一天都快乐！'}
                     {card.id === 4 && '愿星光指引你前行，每一步都充满希望！'}
                     {card.id === 5 && '愿你的梦想展翅高飞，飞向更远的天空！'}
                     {card.id === 6 && '愿你永远活力满满，拥抱每一个精彩瞬间！'}

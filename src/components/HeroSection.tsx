@@ -88,7 +88,7 @@ const HeroSection = () => {
             <div className="flex items-center justify-center gap-2">
               <Zap className="w-8 h-8 md:w-12 md:h-12 text-neon-blue animate-bounce" />
               <span className="text-5xl md:text-7xl font-bold gradient-text font-display">
-                生日
+                惊喜
               </span>
               <Rainbow className="w-8 h-8 md:w-12 md:h-12 text-neon-purple animate-bounce" style={{ animationDelay: '0.2s' }} />
             </div>
