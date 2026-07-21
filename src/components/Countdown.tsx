@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useCountdown, getBirthdayInfo } from '../hooks/useCountdown';
-import { LUNAR_DATE } from '../utils/constants';
 
 interface CountdownCardProps {
   value: number;
@@ -45,7 +44,7 @@ const Countdown = () => {
           🎉 今天就是生日啦！ 🎉
         </div>
         <div className="text-light-gray mt-2">
-          {birthdayInfo.formattedLunar}
+          {birthdayInfo.solarYear}年{birthdayInfo.solarMonth}月{birthdayInfo.solarDay}日
         </div>
       </div>
     );
@@ -54,7 +53,7 @@ const Countdown = () => {
   return (
     <div className="flex flex-col items-center">
       <div className="text-silver-gray text-sm mb-4">
-        {birthdayInfo.solarYear}年{birthdayInfo.solarMonth}月{birthdayInfo.solarDay}日 {LUNAR_DATE}
+        生日：{birthdayInfo.solarYear}年{birthdayInfo.solarMonth}月{birthdayInfo.solarDay}日
       </div>
       <div className="flex flex-wrap justify-center gap-4 md:gap-6">
         <CountdownCard value={days} label="天" delay={0.2} />

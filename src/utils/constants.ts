@@ -1,5 +1,5 @@
-export const LUNAR_BIRTHDAY_MONTH = 6;
-export const LUNAR_BIRTHDAY_DAY = 21;
+export const BIRTHDAY_MONTH = 7;
+export const BIRTHDAY_DAY = 26;
 export const LUNAR_DATE = '农历六月二十一';
 
 export const WISH_MESSAGES = [
