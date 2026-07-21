@@ -211,76 +211,57 @@ class GameAudio {
   playFirework(baseFreq?: number) {
     const ctx = this.getContext();
     const now = ctx.currentTime;
-    const duration = 0.5;
     
-    const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
-    const noiseData = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < noiseData.length; i++) {
-      noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.3));
-    }
+    const rootFreq = baseFreq || 523.25;
+    const harmony = [1, 1.25, 1.5, 2, 2.5, 3];
     
-    const noiseSource = ctx.createBufferSource();
-    noiseSource.buffer = noiseBuffer;
-    const noiseFilter = ctx.createBiquadFilter();
-    noiseFilter.type = 'lowpass';
-    noiseFilter.frequency.setValueAtTime(2000, now);
-    noiseFilter.frequency.exponentialRampToValueAtTime(200, now + duration);
-    const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.15, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-    
-    noiseSource.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(ctx.destination);
-    noiseSource.start(now);
-    
-    const frequencies = baseFreq 
-      ? [baseFreq * 2, baseFreq * 3, baseFreq * 4, baseFreq * 1.5, baseFreq * 0.5]
-      : [400, 600, 800, 1000, 1200];
-    
-    frequencies.forEach((freq, i) => {
+    harmony.forEach((ratio, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      const detune = (Math.random() - 0.5) * 50;
       
       osc.connect(gain);
       gain.connect(ctx.destination);
       
-      osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+      const freq = rootFreq * ratio;
+      const detune = (Math.random() - 0.5) * 20;
+      
+      osc.type = 'sine';
       osc.frequency.setValueAtTime(freq + detune, now);
-      osc.frequency.exponentialRampToValueAtTime(freq * 0.3, now + duration * (0.8 + Math.random() * 0.4));
       
-      const startTime = now + Math.random() * 0.05;
-      gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.08 + Math.random() * 0.06, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + duration * (0.6 + Math.random() * 0.4));
+      const delay = i * 0.03;
+      const startTime = now + delay;
+      const peakGain = 0.06 / (1 + i * 0.3);
+      const decay = 0.4 + i * 0.1;
       
-      osc.start(now);
-      osc.stop(now + duration + 0.1);
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(peakGain, startTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + decay);
+      
+      osc.start(startTime);
+      osc.stop(startTime + decay + 0.05);
     });
     
-    const sparkleCount = 8;
+    const sparkleCount = 5;
     for (let i = 0; i < sparkleCount; i++) {
-      setTimeout(() => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        
-        const sparkleFreq = baseFreq 
-          ? baseFreq * (2 + Math.random() * 3)
-          : 800 + Math.random() * 800;
-        
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(sparkleFreq, ctx.currentTime);
-        
-        gain.gain.setValueAtTime(0.02, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-        
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.1);
-      }, Math.random() * 300);
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      const sparkleFreq = rootFreq * (4 + Math.random() * 4);
+      const startTime = now + 0.05 + i * 0.06 + Math.random() * 0.1;
+      
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(sparkleFreq, startTime);
+      osc.frequency.exponentialRampToValueAtTime(sparkleFreq * 1.5, startTime + 0.15);
+      
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.03, startTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.15);
+      
+      osc.start(startTime);
+      osc.stop(startTime + 0.2);
     }
   }
 
