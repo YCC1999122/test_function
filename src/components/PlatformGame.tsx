@@ -65,9 +65,9 @@ interface Level {
 }
 
 const MAX_LEVELS = 1;
-const CANVAS_WIDTH = 1600;
-const CANVAS_HEIGHT = 750;
-const SAFE_ZONE_X = 260;
+const CANVAS_WIDTH = 900;
+const CANVAS_HEIGHT = 1800;
+const SAFE_ZONE_X = 180;
 
 const createBoss = (
   x: number, y: number, speed: number, aiType: BossAIType,
@@ -97,130 +97,200 @@ const createBoss = (
 const LEVELS: Level[] = [
   {
     platforms: [
-      // Layer 1 - 地面 (y=670)
-      { x: 40, y: 670, width: 260, height: 20, color: '#00d4ff' },
-      { x: 360, y: 670, width: 180, height: 20, color: '#06b6d4' },
-      { x: 600, y: 670, width: 180, height: 20, color: '#22d3ee' },
-      { x: 850, y: 670, width: 180, height: 20, color: '#0891b2' },
-      { x: 1100, y: 670, width: 180, height: 20, color: '#0e7490' },
-      { x: 1340, y: 670, width: 220, height: 20, color: '#155e75' },
+      // Layer 1 - 地面 (y=1680)
+      { x: 20, y: 1680, width: 180, height: 20, color: '#00d4ff' },
+      { x: 240, y: 1680, width: 150, height: 20, color: '#06b6d4' },
+      { x: 430, y: 1680, width: 150, height: 20, color: '#22d3ee' },
+      { x: 620, y: 1680, width: 140, height: 20, color: '#0891b2' },
+      { x: 780, y: 1680, width: 100, height: 20, color: '#0e7490' },
 
-      // Layer 2 (y=540)
-      { x: 80, y: 540, width: 140, height: 20, color: '#9d4edd' },
-      { x: 280, y: 540, width: 130, height: 20, color: '#a855f7' },
-      { x: 480, y: 540, width: 130, height: 20, color: '#c084fc' },
-      { x: 680, y: 540, width: 130, height: 20, color: '#d946ef' },
-      { x: 880, y: 540, width: 130, height: 20, color: '#e879f9' },
-      { x: 1080, y: 540, width: 130, height: 20, color: '#f0abfc' },
-      { x: 1280, y: 540, width: 140, height: 20, color: '#f5d0fe' },
+      // Layer 2 (y=1520)
+      { x: 40, y: 1520, width: 110, height: 20, color: '#9d4edd' },
+      { x: 200, y: 1520, width: 110, height: 20, color: '#a855f7' },
+      { x: 360, y: 1520, width: 110, height: 20, color: '#c084fc' },
+      { x: 520, y: 1520, width: 110, height: 20, color: '#d946ef' },
+      { x: 680, y: 1520, width: 110, height: 20, color: '#e879f9' },
+      { x: 820, y: 1520, width: 70, height: 20, color: '#f0abfc' },
 
-      // Layer 3 (y=410)
-      { x: 30, y: 410, width: 120, height: 20, color: '#ff6b9d' },
-      { x: 200, y: 410, width: 120, height: 20, color: '#ec4899' },
-      { x: 380, y: 410, width: 120, height: 20, color: '#f472b6' },
-      { x: 560, y: 410, width: 120, height: 20, color: '#fb7185' },
-      { x: 740, y: 410, width: 120, height: 20, color: '#fda4af' },
-      { x: 920, y: 410, width: 120, height: 20, color: '#fecdd3' },
-      { x: 1100, y: 410, width: 120, height: 20, color: '#fbcfe8' },
-      { x: 1280, y: 410, width: 150, height: 20, color: '#f9a8d4' },
+      // Layer 3 (y=1360)
+      { x: 20, y: 1360, width: 100, height: 20, color: '#ff6b9d' },
+      { x: 180, y: 1360, width: 100, height: 20, color: '#ec4899' },
+      { x: 340, y: 1360, width: 100, height: 20, color: '#f472b6' },
+      { x: 500, y: 1360, width: 100, height: 20, color: '#fb7185' },
+      { x: 660, y: 1360, width: 100, height: 20, color: '#fda4af' },
+      { x: 810, y: 1360, width: 70, height: 20, color: '#f9a8d4' },
 
-      // Layer 4 (y=280)
-      { x: 60, y: 280, width: 100, height: 20, color: '#facc15' },
-      { x: 230, y: 280, width: 100, height: 20, color: '#fbbf24' },
-      { x: 400, y: 280, width: 100, height: 20, color: '#f59e0b' },
-      { x: 570, y: 280, width: 100, height: 20, color: '#d97706' },
-      { x: 740, y: 280, width: 100, height: 20, color: '#b45309' },
-      { x: 910, y: 280, width: 100, height: 20, color: '#92400e' },
-      { x: 1080, y: 280, width: 100, height: 20, color: '#78350f' },
-      { x: 1250, y: 280, width: 100, height: 20, color: '#713f12' },
-      { x: 1420, y: 280, width: 100, height: 20, color: '#3f6212' },
+      // Layer 4 (y=1200)
+      { x: 50, y: 1200, width: 90, height: 20, color: '#facc15' },
+      { x: 200, y: 1200, width: 90, height: 20, color: '#fbbf24' },
+      { x: 350, y: 1200, width: 90, height: 20, color: '#f59e0b' },
+      { x: 500, y: 1200, width: 90, height: 20, color: '#d97706' },
+      { x: 650, y: 1200, width: 90, height: 20, color: '#b45309' },
+      { x: 800, y: 1200, width: 80, height: 20, color: '#92400e' },
 
-      // Layer 5 (y=160)
-      { x: 150, y: 160, width: 120, height: 20, color: '#84cc16' },
-      { x: 380, y: 160, width: 120, height: 20, color: '#65a30d' },
-      { x: 610, y: 160, width: 120, height: 20, color: '#4d7c0f' },
-      { x: 840, y: 160, width: 120, height: 20, color: '#3f6212' },
-      { x: 1070, y: 160, width: 120, height: 20, color: '#365314' },
-      { x: 1300, y: 160, width: 120, height: 20, color: '#1a2e05' },
+      // Layer 5 (y=1040)
+      { x: 30, y: 1040, width: 100, height: 20, color: '#84cc16' },
+      { x: 190, y: 1040, width: 100, height: 20, color: '#65a30d' },
+      { x: 350, y: 1040, width: 100, height: 20, color: '#4d7c0f' },
+      { x: 510, y: 1040, width: 100, height: 20, color: '#3f6212' },
+      { x: 670, y: 1040, width: 100, height: 20, color: '#365314' },
+      { x: 820, y: 1040, width: 70, height: 20, color: '#1a2e05' },
 
-      // Layer 6 - 顶层奖励平台 (y=60)
-      { x: 350, y: 60, width: 100, height: 20, color: '#f97316' },
-      { x: 750, y: 60, width: 200, height: 20, color: '#ef4444' },
-      { x: 1150, y: 60, width: 100, height: 20, color: '#dc2626' },
+      // Layer 6 (y=880)
+      { x: 40, y: 880, width: 90, height: 20, color: '#22d3ee' },
+      { x: 190, y: 880, width: 90, height: 20, color: '#06b6d4' },
+      { x: 340, y: 880, width: 90, height: 20, color: '#0891b2' },
+      { x: 490, y: 880, width: 90, height: 20, color: '#0e7490' },
+      { x: 640, y: 880, width: 90, height: 20, color: '#155e75' },
+      { x: 790, y: 880, width: 80, height: 20, color: '#164e63' },
+
+      // Layer 7 (y=720)
+      { x: 25, y: 720, width: 90, height: 20, color: '#f97316' },
+      { x: 175, y: 720, width: 90, height: 20, color: '#ea580c' },
+      { x: 325, y: 720, width: 90, height: 20, color: '#dc2626' },
+      { x: 475, y: 720, width: 90, height: 20, color: '#b91c1c' },
+      { x: 625, y: 720, width: 90, height: 20, color: '#991b1b' },
+      { x: 780, y: 720, width: 90, height: 20, color: '#7f1d1d' },
+
+      // Layer 8 (y=560)
+      { x: 50, y: 560, width: 80, height: 20, color: '#ec4899' },
+      { x: 180, y: 560, width: 80, height: 20, color: '#f43f5e' },
+      { x: 310, y: 560, width: 80, height: 20, color: '#e11d48' },
+      { x: 440, y: 560, width: 80, height: 20, color: '#be123c' },
+      { x: 570, y: 560, width: 80, height: 20, color: '#9f1239' },
+      { x: 700, y: 560, width: 80, height: 20, color: '#881337' },
+      { x: 820, y: 560, width: 60, height: 20, color: '#4c0519' },
+
+      // Layer 9 (y=400)
+      { x: 40, y: 400, width: 80, height: 20, color: '#facc15' },
+      { x: 160, y: 400, width: 80, height: 20, color: '#fbbf24' },
+      { x: 280, y: 400, width: 80, height: 20, color: '#f59e0b' },
+      { x: 400, y: 400, width: 80, height: 20, color: '#d97706' },
+      { x: 520, y: 400, width: 80, height: 20, color: '#b45309' },
+      { x: 640, y: 400, width: 80, height: 20, color: '#92400e' },
+      { x: 760, y: 400, width: 80, height: 20, color: '#713f12' },
+
+      // Layer 10 - 顶层奖励 (y=240)
+      { x: 200, y: 240, width: 100, height: 20, color: '#ef4444' },
+      { x: 420, y: 240, width: 100, height: 20, color: '#dc2626' },
+      { x: 640, y: 240, width: 100, height: 20, color: '#b91c1c' },
+
+      // 顶端终极平台 (y=120)
+      { x: 350, y: 120, width: 200, height: 20, color: '#f59e0b' },
     ],
     stars: [
       // Layer 1 stars
-      { x: 170, y: 620, radius: 14, collected: false },
-      { x: 440, y: 620, radius: 14, collected: false },
-      { x: 690, y: 620, radius: 14, collected: false },
-      { x: 940, y: 620, radius: 14, collected: false },
-      { x: 1190, y: 620, radius: 14, collected: false },
-      { x: 1450, y: 620, radius: 14, collected: false },
+      { x: 110, y: 1630, radius: 12, collected: false },
+      { x: 315, y: 1630, radius: 12, collected: false },
+      { x: 505, y: 1630, radius: 12, collected: false },
+      { x: 690, y: 1630, radius: 12, collected: false },
+      { x: 830, y: 1630, radius: 12, collected: false },
 
       // Layer 2 stars
-      { x: 150, y: 490, radius: 14, collected: false },
-      { x: 345, y: 490, radius: 14, collected: false },
-      { x: 545, y: 490, radius: 14, collected: false },
-      { x: 745, y: 490, radius: 14, collected: false },
-      { x: 945, y: 490, radius: 14, collected: false },
-      { x: 1145, y: 490, radius: 14, collected: false },
-      { x: 1350, y: 490, radius: 14, collected: false },
+      { x: 95, y: 1470, radius: 12, collected: false },
+      { x: 255, y: 1470, radius: 12, collected: false },
+      { x: 415, y: 1470, radius: 12, collected: false },
+      { x: 575, y: 1470, radius: 12, collected: false },
+      { x: 735, y: 1470, radius: 12, collected: false },
 
       // Layer 3 stars
-      { x: 90, y: 360, radius: 14, collected: false },
-      { x: 260, y: 360, radius: 14, collected: false },
-      { x: 440, y: 360, radius: 14, collected: false },
-      { x: 620, y: 360, radius: 14, collected: false },
-      { x: 800, y: 360, radius: 14, collected: false },
-      { x: 980, y: 360, radius: 14, collected: false },
-      { x: 1160, y: 360, radius: 14, collected: false },
-      { x: 1355, y: 360, radius: 14, collected: false },
+      { x: 70, y: 1310, radius: 12, collected: false },
+      { x: 230, y: 1310, radius: 12, collected: false },
+      { x: 390, y: 1310, radius: 12, collected: false },
+      { x: 550, y: 1310, radius: 12, collected: false },
+      { x: 710, y: 1310, radius: 12, collected: false },
 
       // Layer 4 stars
-      { x: 110, y: 230, radius: 14, collected: false },
-      { x: 280, y: 230, radius: 14, collected: false },
-      { x: 450, y: 230, radius: 14, collected: false },
-      { x: 620, y: 230, radius: 14, collected: false },
-      { x: 790, y: 230, radius: 14, collected: false },
-      { x: 960, y: 230, radius: 14, collected: false },
-      { x: 1130, y: 230, radius: 14, collected: false },
-      { x: 1300, y: 230, radius: 14, collected: false },
-      { x: 1470, y: 230, radius: 14, collected: false },
+      { x: 95, y: 1150, radius: 12, collected: false },
+      { x: 245, y: 1150, radius: 12, collected: false },
+      { x: 395, y: 1150, radius: 12, collected: false },
+      { x: 545, y: 1150, radius: 12, collected: false },
+      { x: 695, y: 1150, radius: 12, collected: false },
 
       // Layer 5 stars
-      { x: 210, y: 110, radius: 14, collected: false },
-      { x: 440, y: 110, radius: 14, collected: false },
-      { x: 670, y: 110, radius: 14, collected: false },
-      { x: 900, y: 110, radius: 14, collected: false },
-      { x: 1130, y: 110, radius: 14, collected: false },
-      { x: 1360, y: 110, radius: 14, collected: false },
+      { x: 80, y: 990, radius: 12, collected: false },
+      { x: 240, y: 990, radius: 12, collected: false },
+      { x: 400, y: 990, radius: 12, collected: false },
+      { x: 560, y: 990, radius: 12, collected: false },
+      { x: 720, y: 990, radius: 12, collected: false },
 
-      // TOP - 奖励星星 (最高处)
-      { x: 400, y: 25, radius: 18, collected: false },
-      { x: 850, y: 20, radius: 25, collected: false, isSpecial: true },
-      { x: 1200, y: 25, radius: 18, collected: false },
+      // Layer 6 stars
+      { x: 85, y: 830, radius: 12, collected: false },
+      { x: 235, y: 830, radius: 12, collected: false },
+      { x: 385, y: 830, radius: 12, collected: false },
+      { x: 535, y: 830, radius: 12, collected: false },
+      { x: 685, y: 830, radius: 12, collected: false },
+
+      // Layer 7 stars
+      { x: 70, y: 670, radius: 12, collected: false },
+      { x: 220, y: 670, radius: 12, collected: false },
+      { x: 370, y: 670, radius: 12, collected: false },
+      { x: 520, y: 670, radius: 12, collected: false },
+      { x: 670, y: 670, radius: 12, collected: false },
+
+      // Layer 8 stars
+      { x: 90, y: 510, radius: 12, collected: false },
+      { x: 220, y: 510, radius: 12, collected: false },
+      { x: 350, y: 510, radius: 12, collected: false },
+      { x: 480, y: 510, radius: 12, collected: false },
+      { x: 610, y: 510, radius: 12, collected: false },
+      { x: 740, y: 510, radius: 12, collected: false },
+
+      // Layer 9 stars
+      { x: 80, y: 350, radius: 12, collected: false },
+      { x: 200, y: 350, radius: 12, collected: false },
+      { x: 320, y: 350, radius: 12, collected: false },
+      { x: 440, y: 350, radius: 12, collected: false },
+      { x: 560, y: 350, radius: 12, collected: false },
+      { x: 680, y: 350, radius: 12, collected: false },
+      { x: 800, y: 350, radius: 12, collected: false },
+
+      // Layer 10 stars (near top)
+      { x: 250, y: 190, radius: 16, collected: false },
+      { x: 470, y: 190, radius: 16, collected: false },
+      { x: 690, y: 190, radius: 16, collected: false },
+
+      // 终极奖励星 (最顶端)
+      { x: 450, y: 70, radius: 30, collected: false, isSpecial: true },
     ],
     bosses: [
-      // Layer 1 bosses
-      createBoss(500, 630, 2.5, 'patroller', 380, 780, '#ef4444', '👾', 400),
-      createBoss(1150, 630, 2.2, 'patroller', 1050, 1320, '#f97316', '👻', 400),
+      // Layer 1
+      createBoss(400, 1640, 2.2, 'patroller', 200, 580, '#ef4444', '👾', 300),
+      createBoss(700, 1640, 2, 'patroller', 580, 820, '#f97316', '👻', 300),
 
-      // Layer 2 bosses
-      createBoss(500, 500, 2.2, 'tracker', 450, 780, '#a855f7', '🤖', 350),
-      createBoss(1100, 500, 2, 'tracker', 1050, 1280, '#ec4899', '💀', 350),
+      // Layer 2
+      createBoss(300, 1480, 2, 'tracker', 200, 500, '#a855f7', '🤖', 280),
+      createBoss(700, 1480, 1.8, 'tracker', 550, 820, '#ec4899', '💀', 280),
 
-      // Layer 3 bosses
-      createBoss(300, 370, 2, 'jumper', 200, 500, '#84cc16', '👹', 300),
-      createBoss(900, 370, 2, 'jumper', 800, 1100, '#06b6d4', '🐙', 300),
+      // Layer 3
+      createBoss(250, 1320, 2, 'jumper', 180, 450, '#84cc16', '👹', 250),
+      createBoss(600, 1320, 2, 'jumper', 500, 780, '#06b6d4', '🐙', 250),
 
-      // Layer 4 bosses
-      createBoss(600, 240, 2.5, 'charger', 500, 900, '#f43f5e', '🦖', 350),
+      // Layer 4
+      createBoss(400, 1160, 2.2, 'charger', 300, 600, '#f43f5e', '🦖', 280),
 
-      // Layer 5 boss - 守卫上层
-      createBoss(700, 120, 2.8, 'tracker', 550, 1000, '#dc2626', '🐲', 380),
+      // Layer 5
+      createBoss(350, 1000, 2, 'patroller', 200, 580, '#dc2626', '😈', 280),
+      createBoss(700, 1000, 2, 'tracker', 550, 820, '#f472b6', '🐺', 280),
+
+      // Layer 6
+      createBoss(300, 840, 2.5, 'charger', 200, 550, '#8b5cf6', '🦊', 300),
+
+      // Layer 7
+      createBoss(400, 680, 2.2, 'jumper', 250, 600, '#f97316', '🐯', 280),
+
+      // Layer 8
+      createBoss(350, 520, 2.5, 'tracker', 200, 650, '#ef4444', '🐍', 300),
+
+      // Layer 9 (guardian)
+      createBoss(400, 360, 2.8, 'charger', 200, 700, '#dc2626', '🦅', 350),
+
+      // Layer 10 / Top (elite guards)
+      createBoss(300, 200, 3, 'tracker', 200, 600, '#f59e0b', '🐲', 400),
+      createBoss(550, 200, 3, 'tracker', 350, 750, '#f59e0b', '🐲', 400),
     ],
-    startX: 80,
-    startY: 620,
+    startX: 60,
+    startY: 1630,
     bgColor: '#0a0e17',
   },
 ];
@@ -697,13 +767,13 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     }
 
     if ((keys.has('ArrowUp') || keys.has('w') || keys.has(' ') || keys.has('jump')) && !player.isJumping) {
-      player.velocityY = -13.5;
+      player.velocityY = -14;
       player.isJumping = true;
       jump();
     }
 
-    player.velocityY += 0.5;
-    if (player.velocityY > 15) player.velocityY = 15;
+    player.velocityY += 0.45;
+    if (player.velocityY > 16) player.velocityY = 16;
     player.x += player.velocityX;
     player.y += player.velocityY;
 

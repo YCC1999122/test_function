@@ -99,6 +99,23 @@ interface LightOrb {
   maxLife: number;
 }
 
+interface ShapeParticle {
+  x: number;
+  y: number;
+  tx: number; // target x
+  ty: number; // target y
+  vx: number;
+  vy: number;
+  color: string;
+  size: number;
+  opacity: number;
+  phase: 'float' | 'gather' | 'hold' | 'disperse';
+  phaseTimer: number;
+  holdDuration: number;
+}
+
+const SHAPE_TEXTS = ['生日快乐', '❤', '★', '✨', '🎂', '💖', '🌟', '🎉'];
+
 const COLORS = ['#00d4ff', '#9d4edd', '#ff6b9d', '#facc15', '#22d3ee', '#a855f7', '#ec4899', '#fbbf24', '#06b6d4', '#f97316'];
 
 const WISH_TEXTS = [
@@ -138,16 +155,18 @@ const ParticleBackground = () => {
     const confettis: Confetti[] = [];
     const lasers: Laser[] = [];
     const lightOrbs: LightOrb[] = [];
+    const shapeParticles: ShapeParticle[] = [];
     const mouse = { x: -1000, y: -1000 };
     
     const MAX_PARTICLES = 220;
     const MAX_FIREWORK = 200;
     const MAX_WISHES = 6;
-    const MAX_METEORS = 5;
+    const MAX_METEORS = 8;
     const MAX_RINGS = 8;
     const MAX_CONFETTIS = 60;
     const MAX_LASERS = 4;
     const MAX_ORBS = 3;
+    const MAX_SHAPE_PARTICLES = 120;
 
     const resizeCanvas = () => {
       canvas.width = window.innerWidth;
@@ -298,6 +317,124 @@ const ParticleBackground = () => {
         life: 0,
         maxLife: 200 + Math.random() * 150,
       });
+    };
+
+    const generateShapeTargets = (text: string, centerX: number, centerY: number, fontSize: number): { tx: number; ty: number }[] => {
+      const offCanvas = document.createElement('canvas');
+      const offCtx = offCanvas.getContext('2d');
+      if (!offCtx) return [];
+
+      offCanvas.width = Math.max(400, text.length * fontSize * 1.2);
+      offCanvas.height = fontSize * 2;
+
+      offCtx.fillStyle = '#fff';
+      offCtx.font = `bold ${fontSize}px 'Rajdhani', sans-serif`;
+      offCtx.textBaseline = 'middle';
+      offCtx.textAlign = 'center';
+      offCtx.fillText(text, offCanvas.width / 2, offCanvas.height / 2);
+
+      const imageData = offCtx.getImageData(0, 0, offCanvas.width, offCanvas.height).data;
+      const targets: { tx: number; ty: number }[] = [];
+      const step = Math.max(3, Math.floor(fontSize / 12));
+
+      for (let y = 0; y < offCanvas.height; y += step) {
+        for (let x = 0; x < offCanvas.width; x += step) {
+          const index = (y * offCanvas.width + x) * 4 + 3;
+          if (imageData[index] > 128) {
+            targets.push({
+              tx: centerX + x - offCanvas.width / 2,
+              ty: centerY + y - offCanvas.height / 2,
+            });
+          }
+        }
+      }
+
+      return targets;
+    };
+
+    const spawnShapeText = (text?: string) => {
+      if (shapeParticles.length > 0) return;
+      const shapeText = text || SHAPE_TEXTS[Math.floor(Math.random() * SHAPE_TEXTS.length)];
+      const fontSize = 80 + Math.random() * 40;
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+
+      const targets = generateShapeTargets(shapeText, centerX, centerY, fontSize);
+      const count = Math.min(targets.length, MAX_SHAPE_PARTICLES);
+      const step = Math.max(1, Math.floor(targets.length / count));
+
+      for (let i = 0; i < count; i++) {
+        const target = targets[i * step] || targets[i % targets.length];
+        if (!target) continue;
+        shapeParticles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          tx: target.tx,
+          ty: target.ty,
+          vx: (Math.random() - 0.5) * 4,
+          vy: (Math.random() - 0.5) * 4,
+          color: COLORS[Math.floor(Math.random() * COLORS.length)],
+          size: 1.5 + Math.random() * 2,
+          opacity: 0,
+          phase: 'gather',
+          phaseTimer: 0,
+          holdDuration: 240 + Math.random() * 120,
+        });
+      }
+    };
+
+    const drawShapeParticles = () => {
+      for (let i = shapeParticles.length - 1; i >= 0; i--) {
+        const p = shapeParticles[i];
+        p.phaseTimer++;
+
+        if (p.phase === 'gather') {
+          const dx = p.tx - p.x;
+          const dy = p.ty - p.y;
+          p.vx += dx * 0.008;
+          p.vy += dy * 0.008;
+          p.vx *= 0.88;
+          p.vy *= 0.88;
+          p.x += p.vx;
+          p.y += p.vy;
+          p.opacity = Math.min(1, p.opacity + 0.04);
+
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 3 || p.phaseTimer > 120) {
+            p.phase = 'hold';
+            p.phaseTimer = 0;
+          }
+        } else if (p.phase === 'hold') {
+          p.x = p.tx + Math.sin(p.phaseTimer * 0.05) * 1.5;
+          p.y = p.ty + Math.cos(p.phaseTimer * 0.05) * 1.5;
+          p.opacity = 0.8 + 0.2 * Math.sin(p.phaseTimer * 0.08);
+          if (p.phaseTimer > p.holdDuration) {
+            p.phase = 'disperse';
+            p.phaseTimer = 0;
+          }
+        } else if (p.phase === 'disperse') {
+          p.vx += (Math.random() - 0.5) * 0.8;
+          p.vy += (Math.random() - 0.5) * 0.8 - 0.05;
+          p.vx *= 0.96;
+          p.vy *= 0.96;
+          p.x += p.vx;
+          p.y += p.vy;
+          p.opacity *= 0.96;
+          if (p.opacity < 0.01 || p.x < -50 || p.x > canvas.width + 50 || p.y < -50 || p.y > canvas.height + 50) {
+            shapeParticles.splice(i, 1);
+          }
+        }
+
+        ctx.save();
+        ctx.globalAlpha = p.opacity;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = p.size * 6;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     };
 
     const drawStar = (x: number, y: number, size: number, color: string, opacity: number) => {
@@ -805,30 +942,36 @@ const ParticleBackground = () => {
       drawConfettis();
       drawWishes();
       drawFireworks();
+      drawShapeParticles();
 
       // Spawn effects
       if (time % 60 === 0 && wishParticles.length < MAX_WISHES) {
         spawnWish();
       }
 
-      if (time % 120 === 0 && Math.random() > 0.3) {
+      if (time % 150 === 0 && Math.random() > 0.3) {
         spawnFirework();
       }
 
-      if (time % 80 === 0 && Math.random() > 0.5) {
+      if (time % 50 === 0 && Math.random() > 0.4) {
         spawnMeteor();
       }
 
-      if (time % 200 === 0 && Math.random() > 0.5) {
+      if (time % 250 === 0 && Math.random() > 0.4) {
         spawnLaser();
       }
 
-      if (time % 150 === 0) {
+      if (time % 180 === 0) {
         spawnLightOrb();
       }
 
+      // Periodic shape text
+      if (time % 600 === 0) {
+        spawnShapeText();
+      }
+
       // Periodic massive celebration
-      if (time - lastFireworkTime > 600) {
+      if (time - lastFireworkTime > 500) {
         lastFireworkTime = time;
         for (let i = 0; i < 3; i++) {
           setTimeout(() => {
@@ -838,7 +981,7 @@ const ParticleBackground = () => {
               Math.random() * canvas.height * 0.5 + canvas.height * 0.2,
               25
             );
-          }, i * 150);
+          }, i * 120);
         }
       }
 
@@ -887,6 +1030,12 @@ const ParticleBackground = () => {
       });
 
       spawnConfetti(x, y, 35);
+
+      // Click triggers shape text too
+      if (Math.random() > 0.6) {
+        const text = SHAPE_TEXTS[Math.floor(Math.random() * SHAPE_TEXTS.length)];
+        spawnShapeText(text);
+      }
     };
 
     const handleBeat = (e: Event) => {
@@ -901,6 +1050,10 @@ const ParticleBackground = () => {
           Math.random() * canvas.height * 0.4 + canvas.height * 0.2,
           15
         );
+        // Random shape text on strong beats
+        if (Math.random() > 0.85) {
+          spawnShapeText();
+        }
       }
     };
 
