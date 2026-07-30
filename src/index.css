@@ -207,3 +207,258 @@ body {
   pointer-events: none;
   animation: lightRay 6s ease-in-out infinite;
 }
+
+/* 渐变文字流动 */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 光晕脉冲 */
+@keyframes glowPulseNew {
+  0%, 100% { 
+    box-shadow: 0 0 30px rgba(0, 212, 255, 0.5), 0 0 60px rgba(157, 78, 221, 0.3);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 50px rgba(0, 212, 255, 0.8), 0 0 100px rgba(255, 107, 157, 0.4);
+    transform: scale(1.02);
+  }
+}
+
+/* 激光束脉冲 */
+@keyframes beamPulse {
+  0%, 100% { opacity: 0.3; transform: translateX(-50%) translateY(-100%) rotate(var(--rot, 0deg)) scaleY(1); }
+  50% { opacity: 0.8; transform: translateX(-50%) translateY(-100%) rotate(var(--rot, 0deg)) scaleY(1.1); }
+}
+
+/* Zap弹跳 */
+@keyframes zapBounce {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.15) rotate(10deg); }
+}
+
+/* 彩虹旋转 */
+@keyframes rainbowSpin {
+  0% { transform: rotate(0deg) scale(1); filter: hue-rotate(0deg) drop-shadow(0 0 15px #9d4edd); }
+  100% { transform: rotate(360deg) scale(1); filter: hue-rotate(360deg) drop-shadow(0 0 15px #9d4edd); }
+}
+
+/* 词汇弹出 */
+@keyframes wordPop {
+  0% { opacity: 0; transform: scale(0.3) translateY(20px); }
+  60% { transform: scale(1.1) translateY(-5px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* 祝福卡片滑入 */
+@keyframes wishSlideUp {
+  0% { opacity: 0; transform: translateY(30px) scale(0.9); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* 发光脉冲增强 */
+@keyframes pulseGlowStrong {
+  0%, 100% { 
+    opacity: 0.8;
+    box-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
+  }
+  50% { 
+    opacity: 1;
+    box-shadow: 0 0 30px currentColor, 0 0 60px currentColor, 0 0 80px currentColor;
+  }
+}
+
+.pulse-glow-strong {
+  animation: pulseGlowStrong 1.5s ease-in-out infinite;
+}
+
+/* 彩虹文字动画 */
+@keyframes rainbowText {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+.rainbow-text {
+  animation: rainbowText 5s linear infinite;
+}
+
+/* 3D翻转效果 */
+@keyframes flip3d {
+  0% { transform: perspective(400px) rotateY(0deg); }
+  50% { transform: perspective(400px) rotateY(180deg); }
+  100% { transform: perspective(400px) rotateY(360deg); }
+}
+
+.flip-3d {
+  animation: flip3d 6s ease-in-out infinite;
+}
+
+/* 缩放脉冲 */
+@keyframes scalePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.scale-pulse {
+  animation: scalePulse 2s ease-in-out infinite;
+}
+
+/* 滚动文字动画 */
+@keyframes scroll-text {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-scroll-text {
+  animation: scroll-text 30s linear infinite;
+}
+
+/* 烟花爆炸 */
+@keyframes fireworkBurst {
+  0% { transform: scale(0); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.firework-burst {
+  animation: fireworkBurst 0.6s ease-out forwards;
+}
+
+/* 星星闪烁 */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.twinkle {
+  animation: twinkle 2s ease-in-out infinite;
+}
+
+/* 浮动上升 */
+@keyframes floatUp {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+}
+
+.float-up {
+  animation: floatUp 8s linear infinite;
+}
+
+/* 旋转光环 */
+@keyframes orbitSpin {
+  0% { transform: rotate(0deg) translateX(var(--orbit-radius, 100px)) rotate(0deg); }
+  100% { transform: rotate(360deg) translateX(var(--orbit-radius, 100px)) rotate(-360deg); }
+}
+
+.orbit-spin {
+  animation: orbitSpin 10s linear infinite;
+}
+
+/* 全息闪烁 */
+@keyframes hologram {
+  0%, 100% { 
+    opacity: 0.9;
+    background-position: 0% 50%;
+  }
+  50% { 
+    opacity: 1;
+    background-position: 100% 50%;
+  }
+}
+
+.hologram {
+  background: linear-gradient(90deg, #00d4ff, #9d4edd, #ff6b9d, #facc15, #00d4ff);
+  background-size: 200% 100%;
+  animation: hologram 3s linear infinite;
+}
+
+/* 边框流光 */
+@keyframes borderFlow {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+
+.border-flow {
+  background: linear-gradient(90deg, transparent, #00d4ff, #9d4edd, #ff6b9d, transparent);
+  background-size: 200% 100%;
+  animation: borderFlow 3s linear infinite;
+}
+
+/* 心形脉冲 */
+@keyframes heartPulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 5px currentColor); }
+  50% { transform: scale(1.2); filter: drop-shadow(0 0 15px currentColor); }
+}
+
+.heart-pulse {
+  animation: heartPulse 1.2s ease-in-out infinite;
+}
+
+/* 打字机效果 */
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blink {
+  50% { border-color: transparent; }
+}
+
+.typing-effect {
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid currentColor;
+  animation: typing 3s steps(30, end), blink 0.75s step-end infinite;
+}
+
+/* 发光边框 */
+.glow-border {
+  position: relative;
+}
+
+.glow-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(90deg, #00d4ff, #9d4edd, #ff6b9d, #facc15, #00d4ff);
+  background-size: 300% 100%;
+  border-radius: inherit;
+  z-index: -1;
+  animation: gradientShift 4s linear infinite;
+  filter: blur(8px);
+}
+
+/* 动态背景网格 */
+.grid-bg {
+  background-image: 
+    linear-gradient(rgba(0, 212, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: gridMove 20s linear infinite;
+}
+
+@keyframes gridMove {
+  0% { background-position: 0 0; }
+  100% { background-position: 50px 50px; }
+}
+
+/* 彩虹光束 */
+.rainbow-beam {
+  position: absolute;
+  width: 2px;
+  height: 100%;
+  background: linear-gradient(to bottom, transparent, currentColor, transparent);
+  opacity: 0.5;
+  animation: beamPulse 2s ease-in-out infinite;
+}
+
+/* 闪烁文字 */
+@keyframes sparkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; text-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
+}
+
+.sparkle-text {
+  animation: sparkle 1.5s ease-in-out infinite;
+}

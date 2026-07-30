@@ -5,3 +5,6 @@ dist-ssr
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
+
+# 原始音乐源文件（已复制到 public/bgm.flac）
+music/

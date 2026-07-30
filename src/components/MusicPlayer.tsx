@@ -7,37 +7,8 @@ const MusicPlayer = ({ autoPlay = false }: { autoPlay?: boolean }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showActivateOverlay, setShowActivateOverlay] = useState(autoPlay);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const intervalRef = useRef<number | null>(null);
-  const currentNoteRef = useRef(0);
-
-  const notes = [
-    { freq: 523.25, duration: 0.5 },
-    { freq: 523.25, duration: 0.5 },
-    { freq: 587.33, duration: 1 },
-    { freq: 523.25, duration: 1 },
-    { freq: 698.46, duration: 1 },
-    { freq: 659.25, duration: 2 },
-    { freq: 523.25, duration: 0.5 },
-    { freq: 523.25, duration: 0.5 },
-    { freq: 587.33, duration: 1 },
-    { freq: 523.25, duration: 1 },
-    { freq: 783.99, duration: 1 },
-    { freq: 698.46, duration: 2 },
-    { freq: 523.25, duration: 0.5 },
-    { freq: 523.25, duration: 0.5 },
-    { freq: 1046.50, duration: 1 },
-    { freq: 880.00, duration: 1 },
-    { freq: 698.46, duration: 1 },
-    { freq: 659.25, duration: 1 },
-    { freq: 587.33, duration: 2 },
-    { freq: 493.88, duration: 0.5 },
-    { freq: 493.88, duration: 0.5 },
-    { freq: 880.00, duration: 1 },
-    { freq: 698.46, duration: 1 },
-    { freq: 783.99, duration: 1 },
-    { freq: 698.46, duration: 2 },
-  ];
 
   const initAudioContext = useCallback(async () => {
     if (!audioContextRef.current) {
@@ -49,65 +20,24 @@ const MusicPlayer = ({ autoPlay = false }: { autoPlay?: boolean }) => {
     }
   }, []);
 
-  const playNote = (freq: number, duration: number) => {
-    if (!audioContextRef.current || isMuted) return;
-
-    const ctx = audioContextRef.current;
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    oscillator.type = 'sine';
-    oscillator.frequency.value = freq;
-
-    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
-
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + duration);
-
-    window.dispatchEvent(new CustomEvent('music-beat', { detail: { freq, duration } }));
-  };
-
   const playMusic = useCallback(async () => {
     await initAudioContext();
-
-    let noteIndex = currentNoteRef.current;
-    const totalNotes = notes.length;
-
-    const playNextNote = () => {
-      if (!isPlaying) return;
-
-      const note = notes[noteIndex];
-      playNote(note.freq, note.duration);
-
-      currentNoteRef.current = noteIndex;
-      setProgress(((noteIndex + 1) / totalNotes) * 100);
-
-      noteIndex = (noteIndex + 1) % totalNotes;
-
-      intervalRef.current = window.setTimeout(playNextNote, note.duration * 1000);
-    };
-
-    playNextNote();
-  }, [initAudioContext, isPlaying]);
+    if (audioRef.current) {
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+      }).catch(() => {});
+    }
+  }, [initAudioContext]);
 
   const stopMusic = useCallback(() => {
-    if (intervalRef.current) {
-      clearTimeout(intervalRef.current);
-      intervalRef.current = null;
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.suspend();
+    if (audioRef.current) {
+      audioRef.current.pause();
     }
   }, []);
 
   const activateAudioAndPlay = useCallback(async () => {
     await initAudioContext();
     setShowActivateOverlay(false);
-    setIsPlaying(true);
     playMusic();
   }, [initAudioContext, playMusic]);
 
@@ -140,6 +70,12 @@ const MusicPlayer = ({ autoPlay = false }: { autoPlay?: boolean }) => {
     };
   }, [stopMusic]);
 
+  const handleTimeUpdate = () => {
+    if (audioRef.current && audioRef.current.duration) {
+      setProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
+    }
+  };
+
   const togglePlay = () => {
     if (isPlaying) {
       stopMusic();
@@ -152,10 +88,21 @@ const MusicPlayer = ({ autoPlay = false }: { autoPlay?: boolean }) => {
 
   const toggleMute = () => {
     setIsMuted(!isMuted);
+    if (audioRef.current) {
+      audioRef.current.muted = !isMuted;
+    }
   };
 
   return (
     <>
+      <audio
+        ref={audioRef}
+        src="/bgm.flac"
+        loop
+        onTimeUpdate={handleTimeUpdate}
+        onEnded={() => setIsPlaying(false)}
+      />
+
       {showActivateOverlay && (
         <div
           onClick={activateAudioAndPlay}
