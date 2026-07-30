@@ -2,11 +2,15 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import { gameAudio } from './GameAudio';
 
+// 使用相对路径，兼容 GitHub Pages 子路径部署
+const BGM_SRC = './bgm.mp3';
+
 const MusicPlayer = ({ autoPlay = false }: { autoPlay?: boolean }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showActivateOverlay, setShowActivateOverlay] = useState(autoPlay);
+  const [loadError, setLoadError] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -23,9 +27,13 @@ const MusicPlayer = ({ autoPlay = false }: { autoPlay?: boolean }) => {
   const playMusic = useCallback(async () => {
     await initAudioContext();
     if (audioRef.current) {
+      audioRef.current.volume = 0.5;
       audioRef.current.play().then(() => {
         setIsPlaying(true);
-      }).catch(() => {});
+      }).catch((err) => {
+        console.warn('音乐播放失败:', err);
+        setIsPlaying(false);
+      });
     }
   }, [initAudioContext]);
 
@@ -38,28 +46,12 @@ const MusicPlayer = ({ autoPlay = false }: { autoPlay?: boolean }) => {
   const activateAudioAndPlay = useCallback(async () => {
     await initAudioContext();
     setShowActivateOverlay(false);
-    playMusic();
+    await playMusic();
   }, [initAudioContext, playMusic]);
 
   useEffect(() => {
-    if (autoPlay) {
-      const checkAndActivate = async () => {
-        try {
-          const ctx = new AudioContext();
-          await ctx.resume();
-          if (ctx.state === 'running') {
-            audioContextRef.current = ctx;
-            setIsPlaying(true);
-            playMusic();
-          } else {
-            ctx.close();
-          }
-        } catch {
-        }
-      };
-      checkAndActivate();
-    }
-  }, [autoPlay, playMusic]);
+    // 不再尝试自动激活（浏览器会阻止），直接显示覆盖层等待用户点击
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -81,7 +73,6 @@ const MusicPlayer = ({ autoPlay = false }: { autoPlay?: boolean }) => {
       stopMusic();
       setIsPlaying(false);
     } else {
-      setIsPlaying(true);
       playMusic();
     }
   };
@@ -97,10 +88,12 @@ const MusicPlayer = ({ autoPlay = false }: { autoPlay?: boolean }) => {
     <>
       <audio
         ref={audioRef}
-        src="/bgm.mp3"
+        src={BGM_SRC}
         loop
         onTimeUpdate={handleTimeUpdate}
         onEnded={() => setIsPlaying(false)}
+        onError={() => setLoadError(true)}
+        onCanPlay={() => setLoadError(false)}
         preload="auto"
       />
 
@@ -115,6 +108,9 @@ const MusicPlayer = ({ autoPlay = false }: { autoPlay?: boolean }) => {
             </div>
             <h3 className="text-2xl font-bold text-white mb-2 font-display">点击开启</h3>
             <p className="text-silver-gray">点击任意位置激活音频体验</p>
+            {loadError && (
+              <p className="text-red-400 text-xs mt-2">音频加载中，请稍候再试</p>
+            )}
           </div>
         </div>
       )}
