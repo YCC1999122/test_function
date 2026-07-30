@@ -129,6 +129,7 @@ const ParticleBackground = () => {
     let animationId: number;
     let time = 0;
     let lastFireworkTime = 0;
+    let frameSkip = 0;
     const particles: Particle[] = [];
     const wishParticles: WishParticle[] = [];
     const fireworkParticles: FireworkParticle[] = [];
@@ -138,7 +139,15 @@ const ParticleBackground = () => {
     const lasers: Laser[] = [];
     const lightOrbs: LightOrb[] = [];
     const mouse = { x: -1000, y: -1000 };
-    const particleCount = 260;
+    
+    const MAX_PARTICLES = 220;
+    const MAX_FIREWORK = 200;
+    const MAX_WISHES = 6;
+    const MAX_METEORS = 5;
+    const MAX_RINGS = 8;
+    const MAX_CONFETTIS = 60;
+    const MAX_LASERS = 4;
+    const MAX_ORBS = 3;
 
     const resizeCanvas = () => {
       canvas.width = window.innerWidth;
@@ -147,7 +156,7 @@ const ParticleBackground = () => {
 
     const initParticles = () => {
       particles.length = 0;
-      for (let i = 0; i < particleCount; i++) {
+      for (let i = 0; i < MAX_PARTICLES; i++) {
         const type = Math.random() < 0.2 ? 'star' : Math.random() < 0.35 ? 'sparkle' : 'dot';
         particles.push({
           x: Math.random() * canvas.width,
@@ -167,6 +176,7 @@ const ParticleBackground = () => {
     };
 
     const spawnWish = () => {
+      if (wishParticles.length >= MAX_WISHES) return;
       const text = WISH_TEXTS[Math.floor(Math.random() * WISH_TEXTS.length)];
       const fromLeft = Math.random() > 0.5;
       wishParticles.push({
@@ -183,6 +193,7 @@ const ParticleBackground = () => {
     };
 
     const spawnFirework = (baseFreq?: number) => {
+      if (fireworkParticles.length >= MAX_FIREWORK) return;
       const cx = Math.random() * canvas.width;
       const cy = Math.random() * canvas.height * 0.6 + canvas.height * 0.1;
       const color = COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -208,19 +219,22 @@ const ParticleBackground = () => {
       }
       firework(baseFreq);
 
-      rings.push({
-        x: cx,
-        y: cy,
-        radius: 5,
-        maxRadius: 180 + Math.random() * 120,
-        opacity: 0.9,
-        color,
-        life: 0,
-        lineWidth: 3,
-      });
+      if (rings.length < MAX_RINGS) {
+        rings.push({
+          x: cx,
+          y: cy,
+          radius: 5,
+          maxRadius: 180 + Math.random() * 120,
+          opacity: 0.9,
+          color,
+          life: 0,
+          lineWidth: 3,
+        });
+      }
     };
 
     const spawnMeteor = () => {
+      if (meteors.length >= MAX_METEORS) return;
       const startX = Math.random() * canvas.width * 0.9;
       const startY = -50;
       const angle = Math.PI / 4 + (Math.random() - 0.5) * 0.4;
@@ -238,7 +252,9 @@ const ParticleBackground = () => {
     };
 
     const spawnConfetti = (x: number, y: number, count = 25) => {
-      for (let i = 0; i < count; i++) {
+      if (confettis.length >= MAX_CONFETTIS) return;
+      const actualCount = Math.min(count, MAX_CONFETTIS - confettis.length);
+      for (let i = 0; i < actualCount; i++) {
         const angle = Math.random() * Math.PI * 2;
         const speed = 1 + Math.random() * 5;
         confettis.push({
@@ -258,6 +274,7 @@ const ParticleBackground = () => {
     };
 
     const spawnLaser = () => {
+      if (lasers.length >= MAX_LASERS) return;
       lasers.push({
         angle: Math.random() * Math.PI * 2,
         speed: 0.02 + Math.random() * 0.04,
@@ -269,6 +286,7 @@ const ParticleBackground = () => {
     };
 
     const spawnLightOrb = () => {
+      if (lightOrbs.length >= MAX_ORBS) return;
       lightOrbs.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
@@ -689,11 +707,12 @@ const ParticleBackground = () => {
 
     const animate = () => {
       time++;
+      frameSkip++;
 
       beatPulse *= 0.92;
 
       // Fade trail
-      ctx.fillStyle = 'rgba(10, 14, 23, 0.15)';
+      ctx.fillStyle = 'rgba(10, 14, 23, 0.18)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const breath = 0.5 + 0.5 * Math.sin(time * 0.006);
@@ -701,11 +720,11 @@ const ParticleBackground = () => {
       const breath3 = 0.5 + 0.5 * Math.sin(time * 0.02 + 3);
       const beatBoost = beatPulse * 0.2;
 
-      // Aurora / background gradient
-      drawAurora();
-
-      // Light orbs
-      drawLightOrbs();
+      // Aurora - only every 2nd frame
+      if (frameSkip % 2 === 0) {
+        drawAurora();
+        drawLightOrbs();
+      }
 
       // Multi-layer light sweeps
       const sweepY = (time * 2) % (canvas.height + 600) - 300;
@@ -738,7 +757,7 @@ const ParticleBackground = () => {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Corner glows
-      if (breath > 0.6) {
+      if (breath > 0.6 && frameSkip % 3 === 0) {
         const cornerGrad = ctx.createRadialGradient(
           canvas.width * 0.15, canvas.height * 0.85, 0,
           canvas.width * 0.15, canvas.height * 0.85, canvas.width * 0.35
@@ -749,7 +768,7 @@ const ParticleBackground = () => {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
-      if (breath2 > 0.6) {
+      if (breath2 > 0.6 && frameSkip % 3 === 1) {
         const cornerGrad2 = ctx.createRadialGradient(
           canvas.width * 0.85, canvas.height * 0.15, 0,
           canvas.width * 0.85, canvas.height * 0.15, canvas.width * 0.35
@@ -760,29 +779,24 @@ const ParticleBackground = () => {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
-      if (breath3 > 0.6) {
-        const cornerGrad3 = ctx.createRadialGradient(
-          canvas.width * 0.8, canvas.height * 0.8, 0,
-          canvas.width * 0.8, canvas.height * 0.8, canvas.width * 0.3
+      // Vignette - every 3rd frame
+      if (frameSkip % 3 === 0) {
+        const vignette = ctx.createRadialGradient(
+          canvas.width / 2, canvas.height / 2, canvas.height * 0.3,
+          canvas.width / 2, canvas.height / 2, canvas.height * 0.8
         );
-        cornerGrad3.addColorStop(0, `rgba(34, 211, 238, ${0.05 * breath3})`);
-        cornerGrad3.addColorStop(1, 'transparent');
-        ctx.fillStyle = cornerGrad3;
+        vignette.addColorStop(0, 'transparent');
+        vignette.addColorStop(1, 'rgba(10, 14, 23, 0.45)');
+        ctx.fillStyle = vignette;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
-      // Vignette
-      const vignette = ctx.createRadialGradient(
-        canvas.width / 2, canvas.height / 2, canvas.height * 0.3,
-        canvas.width / 2, canvas.height / 2, canvas.height * 0.8
-      );
-      vignette.addColorStop(0, 'transparent');
-      vignette.addColorStop(1, 'rgba(10, 14, 23, 0.45)');
-      ctx.fillStyle = vignette;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
       particles.forEach(updateParticle);
-      drawConnections();
+      
+      // Only draw connections every 2nd frame (expensive operation)
+      if (frameSkip % 2 === 0) {
+        drawConnections();
+      }
       particles.forEach(drawParticle);
 
       drawLasers();
@@ -793,38 +807,38 @@ const ParticleBackground = () => {
       drawFireworks();
 
       // Spawn effects
-      if (time % 50 === 0 && wishParticles.length < 8) {
+      if (time % 60 === 0 && wishParticles.length < MAX_WISHES) {
         spawnWish();
       }
 
-      if (time % 100 === 0 && Math.random() > 0.4) {
+      if (time % 120 === 0 && Math.random() > 0.3) {
         spawnFirework();
       }
 
-      if (time % 60 === 0 && Math.random() > 0.5) {
+      if (time % 80 === 0 && Math.random() > 0.5) {
         spawnMeteor();
       }
 
-      if (time % 180 === 0 && Math.random() > 0.5) {
+      if (time % 200 === 0 && Math.random() > 0.5) {
         spawnLaser();
       }
 
-      if (time % 120 === 0) {
+      if (time % 150 === 0) {
         spawnLightOrb();
       }
 
       // Periodic massive celebration
-      if (time - lastFireworkTime > 540) {
+      if (time - lastFireworkTime > 600) {
         lastFireworkTime = time;
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 3; i++) {
           setTimeout(() => {
             spawnFirework();
             spawnConfetti(
               Math.random() * canvas.width,
               Math.random() * canvas.height * 0.5 + canvas.height * 0.2,
-              30
+              25
             );
-          }, i * 180);
+          }, i * 150);
         }
       }
 

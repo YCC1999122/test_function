@@ -97,10 +97,11 @@ const MusicPlayer = ({ autoPlay = false }: { autoPlay?: boolean }) => {
     <>
       <audio
         ref={audioRef}
-        src="/bgm.flac"
+        src="/bgm.mp3"
         loop
         onTimeUpdate={handleTimeUpdate}
         onEnded={() => setIsPlaying(false)}
+        preload="auto"
       />
 
       {showActivateOverlay && (
