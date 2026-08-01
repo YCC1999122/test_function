@@ -10,6 +10,9 @@ interface Player {
   velocityX: number;
   velocityY: number;
   isJumping: boolean;
+  jumpCount: number;
+  facing: 1 | -1;
+  shootCooldown: number;
 }
 
 interface Platform {
@@ -53,6 +56,18 @@ interface Boss {
   visionRange: number;
   wanderTarget: number;
   wanderTimer: number;
+  hp: number;
+  maxHp: number;
+  hitFlash: number;
+}
+
+interface Bullet {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  color: string;
 }
 
 interface Level {
@@ -72,7 +87,7 @@ const SAFE_ZONE_X = 180;
 const createBoss = (
   x: number, y: number, speed: number, aiType: BossAIType,
   patrolMin = SAFE_ZONE_X, patrolMax = CANVAS_WIDTH - 50, color = '#ef4444', emoji = '👾',
-  visionRange = 350
+  visionRange = 350, hp = 3
 ): Boss => ({
   x, y,
   width: 40, height: 40,
@@ -92,6 +107,9 @@ const createBoss = (
   visionRange,
   wanderTarget: x,
   wanderTimer: 0,
+  hp,
+  maxHp: hp,
+  hitFlash: 0,
 });
 
 const LEVELS: Level[] = [
@@ -254,40 +272,20 @@ const LEVELS: Level[] = [
       { x: 450, y: 70, radius: 30, collected: false, isSpecial: true },
     ],
     bosses: [
-      // Layer 1
-      createBoss(400, 1640, 2.2, 'patroller', 200, 580, '#ef4444', '👾', 300),
-      createBoss(700, 1640, 2, 'patroller', 580, 820, '#f97316', '👻', 300),
-
       // Layer 2
-      createBoss(300, 1480, 2, 'tracker', 200, 500, '#a855f7', '🤖', 280),
-      createBoss(700, 1480, 1.8, 'tracker', 550, 820, '#ec4899', '💀', 280),
-
-      // Layer 3
-      createBoss(250, 1320, 2, 'jumper', 180, 450, '#84cc16', '👹', 250),
-      createBoss(600, 1320, 2, 'jumper', 500, 780, '#06b6d4', '🐙', 250),
+      createBoss(300, 1480, 1.8, 'patroller', 200, 500, '#a855f7', '🤖', 280, 3),
 
       // Layer 4
-      createBoss(400, 1160, 2.2, 'charger', 300, 600, '#f43f5e', '🦖', 280),
-
-      // Layer 5
-      createBoss(350, 1000, 2, 'patroller', 200, 580, '#dc2626', '😈', 280),
-      createBoss(700, 1000, 2, 'tracker', 550, 820, '#f472b6', '🐺', 280),
+      createBoss(400, 1160, 2, 'charger', 300, 600, '#f43f5e', '🦖', 280, 4),
 
       // Layer 6
-      createBoss(300, 840, 2.5, 'charger', 200, 550, '#8b5cf6', '🦊', 300),
-
-      // Layer 7
-      createBoss(400, 680, 2.2, 'jumper', 250, 600, '#f97316', '🐯', 280),
+      createBoss(300, 840, 2.2, 'jumper', 200, 550, '#8b5cf6', '🦊', 300, 4),
 
       // Layer 8
-      createBoss(350, 520, 2.5, 'tracker', 200, 650, '#ef4444', '🐍', 300),
+      createBoss(350, 520, 2, 'tracker', 200, 650, '#ef4444', '🐍', 300, 5),
 
-      // Layer 9 (guardian)
-      createBoss(400, 360, 2.8, 'charger', 200, 700, '#dc2626', '🦅', 350),
-
-      // Layer 10 / Top (elite guards)
-      createBoss(300, 200, 3, 'tracker', 200, 600, '#f59e0b', '🐲', 400),
-      createBoss(550, 200, 3, 'tracker', 350, 750, '#f59e0b', '🐲', 400),
+      // Layer 10 / Top (final guard)
+      createBoss(450, 200, 2.5, 'charger', 200, 700, '#f59e0b', '🐲', 400, 6),
     ],
     startX: 60,
     startY: 1630,
@@ -314,10 +312,14 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     velocityX: 0,
     velocityY: 0,
     isJumping: false,
+    jumpCount: 0,
+    facing: 1,
+    shootCooldown: 0,
   });
 
   const starsRef = useRef<StarItem[]>([]);
   const bossesRef = useRef<Boss[]>([]);
+  const bulletsRef = useRef<Bullet[]>([]);
   const keysRef = useRef<Set<string>>(new Set());
   const isPlayingRef = useRef(false);
   const animationRef = useRef<number>(0);
@@ -356,9 +358,13 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       velocityX: 0,
       velocityY: 0,
       isJumping: false,
+      jumpCount: 0,
+      facing: 1,
+      shootCooldown: 0,
     };
     starsRef.current = level.stars.map((s) => ({ ...s, collected: false }));
     bossesRef.current = level.bosses.map((b) => ({ ...b }));
+    bulletsRef.current = [];
     collectedStarsRef.current = 0;
     setCollectedStars(0);
     keysRef.current.clear();
@@ -636,6 +642,9 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       if (boss.aiType === 'charger' && boss.state === 'dash') {
         glowColor = '#fbbf24';
       }
+      if (boss.hitFlash > 0) {
+        glowColor = '#ffffff';
+      }
 
       ctx.fillStyle = glowColor;
       ctx.shadowColor = glowColor;
@@ -650,6 +659,37 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(boss.emoji, boss.x + boss.width / 2, boss.y + boss.height / 2);
+
+      // Boss HP bar
+      if (boss.hp < boss.maxHp) {
+        const barW = boss.width + 10;
+        const barH = 4;
+        const barX = boss.x - 5;
+        const barY = boss.y - 10;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(barX, barY, barW, barH);
+        ctx.fillStyle = boss.hp / boss.maxHp > 0.5 ? '#22c55e' : boss.hp / boss.maxHp > 0.25 ? '#facc15' : '#ef4444';
+        ctx.fillRect(barX, barY, barW * (boss.hp / boss.maxHp), barH);
+      }
+    });
+
+    // Draw bullets
+    const bullets = bulletsRef.current;
+    bullets.forEach((b) => {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, b.life / 10);
+      ctx.fillStyle = b.color;
+      ctx.shadowColor = b.color;
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      // Bullet trail
+      ctx.globalAlpha = 0.3;
+      ctx.beginPath();
+      ctx.arc(b.x - b.vx * 1.5, b.y - b.vy * 1.5, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     });
 
     const cx = player.x + player.width / 2;
@@ -760,16 +800,35 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
 
     if (keys.has('ArrowLeft') || keys.has('a') || keys.has('left')) {
       player.velocityX = -5;
+      player.facing = -1;
     } else if (keys.has('ArrowRight') || keys.has('d') || keys.has('right')) {
       player.velocityX = 5;
+      player.facing = 1;
     } else {
       player.velocityX *= 0.8;
     }
 
-    if ((keys.has('ArrowUp') || keys.has('w') || keys.has(' ') || keys.has('jump')) && !player.isJumping) {
+    // Double jump
+    if ((keys.has('ArrowUp') || keys.has('w') || keys.has(' ') || keys.has('jump')) && player.jumpCount < 2) {
       player.velocityY = -14;
+      player.jumpCount++;
       player.isJumping = true;
       jump();
+    }
+
+    // Shooting
+    if (player.shootCooldown > 0) player.shootCooldown--;
+    if ((keys.has('j') || keys.has('f') || keys.has('shoot')) && player.shootCooldown <= 0) {
+      bulletsRef.current.push({
+        x: player.x + player.width / 2 + player.facing * 15,
+        y: player.y + player.height / 2,
+        vx: player.facing * 10,
+        vy: 0,
+        life: 60,
+        color: '#00d4ff',
+      });
+      player.shootCooldown = 12;
+      select();
     }
 
     player.velocityY += 0.45;
@@ -787,6 +846,7 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
           player.y = platform.y - player.height;
           player.velocityY = 0;
           player.isJumping = false;
+          player.jumpCount = 0;
         }
       }
     });
@@ -801,7 +861,11 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         velocityX: 0,
         velocityY: 0,
         isJumping: false,
+        jumpCount: 0,
+        facing: 1,
+        shootCooldown: 0,
       };
+      bulletsRef.current = [];
       draw(ctx);
       animationRef.current = requestAnimationFrame(() => update(ctx));
       return;
@@ -835,10 +899,42 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     let hitByBoss = false;
     bosses.forEach((boss) => {
       updateBoss(boss, player, level.platforms);
+      if (boss.hitFlash > 0) boss.hitFlash--;
       if (checkBossCollision(player, boss)) {
         hitByBoss = true;
       }
     });
+
+    // Update bullets + bullet-boss collision
+    const bullets = bulletsRef.current;
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      const b = bullets[i];
+      b.x += b.vx;
+      b.y += b.vy;
+      b.life--;
+
+      if (b.life <= 0 || b.x < -20 || b.x > CANVAS_WIDTH + 20) {
+        bullets.splice(i, 1);
+        continue;
+      }
+
+      // Check bullet-boss collision
+      for (let j = bosses.length - 1; j >= 0; j--) {
+        const boss = bosses[j];
+        const dx = b.x - (boss.x + boss.width / 2);
+        const dy = b.y - (boss.y + boss.height / 2);
+        if (Math.sqrt(dx * dx + dy * dy) < boss.width / 2 + 4) {
+          boss.hp--;
+          boss.hitFlash = 6;
+          bullets.splice(i, 1);
+          hit();
+          if (boss.hp <= 0) {
+            bosses.splice(j, 1);
+          }
+          break;
+        }
+      }
+    }
 
     if (hitByBoss) {
       hit();
@@ -851,7 +947,11 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         velocityX: 0,
         velocityY: 0,
         isJumping: false,
+        jumpCount: 0,
+        facing: 1,
+        shootCooldown: 0,
       };
+      bulletsRef.current = [];
       draw(ctx);
       animationRef.current = requestAnimationFrame(() => update(ctx));
       return;
@@ -937,13 +1037,13 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     setIsPlaying(true);
   };
 
-  const handleTouchStart = useCallback((direction: 'left' | 'right' | 'jump') => (e: React.TouchEvent | React.MouseEvent) => {
+  const handleTouchStart = useCallback((direction: 'left' | 'right' | 'jump' | 'shoot') => (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     if (!isPlayingRef.current || showLevelComplete || showVictoryMenu) return;
     keysRef.current.add(direction);
   }, [showLevelComplete, showVictoryMenu]);
 
-  const handleTouchEnd = useCallback((direction: 'left' | 'right' | 'jump') => (e: React.TouchEvent | React.MouseEvent) => {
+  const handleTouchEnd = useCallback((direction: 'left' | 'right' | 'jump' | 'shoot') => (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     keysRef.current.delete(direction);
   }, []);
@@ -962,7 +1062,7 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
           </div>
           {LEVELS[currentLevel].bosses.length > 0 && (
             <div className="flex items-center gap-1">
-              <span className="text-red-400">⚔️ {LEVELS[currentLevel].bosses.length}</span>
+              <span className="text-red-400">⚔️ {bossesRef.current.length}</span>
             </div>
           )}
         </div>
@@ -1000,8 +1100,8 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
               <Play className="w-6 h-6" />
               开始游戏
             </button>
-            <p className="text-silver-gray mt-4 text-sm">吃掉所有星星，躲避敌人</p>
-            <p className="text-silver-gray/50 mt-1 text-xs">左侧蓝色区域为安全区，碰到敌人自动重生</p>
+            <p className="text-silver-gray mt-4 text-sm">收集所有星星，用子弹击败怪兽！</p>
+            <p className="text-silver-gray/50 mt-1 text-xs">键盘：方向键移动 / J或F射击 / 空格二段跳</p>
           </div>
         )}
 
@@ -1044,7 +1144,7 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         </div>
       </div>
 
-      <div className="mt-3 md:hidden flex gap-4 select-none justify-center">
+      <div className="mt-3 md:hidden flex gap-3 select-none justify-center flex-wrap">
         <button
           onTouchStart={handleTouchStart('left')}
           onTouchEnd={handleTouchEnd('left')}
@@ -1080,6 +1180,18 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
           style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
         >
           <ArrowRight className="w-6 h-6" />
+        </button>
+        <button
+          onTouchStart={handleTouchStart('shoot')}
+          onTouchEnd={handleTouchEnd('shoot')}
+          onTouchCancel={handleTouchEnd('shoot')}
+          onMouseDown={handleTouchStart('shoot')}
+          onMouseUp={handleTouchEnd('shoot')}
+          onMouseLeave={handleTouchEnd('shoot')}
+          className="w-16 h-16 rounded-full bg-gradient-to-r from-neon-blue to-neon-purple flex items-center justify-center text-white active:scale-95 transition-transform touch-none"
+          style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+        >
+          <span className="text-2xl">🔥</span>
         </button>
       </div>
 
