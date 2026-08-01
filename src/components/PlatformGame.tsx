@@ -987,12 +987,26 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       keysRef.current.delete(e.key);
     };
 
+    const handleMouseDown = () => {
+      if (!isPlayingRef.current || showLevelComplete || showVictoryMenu) return;
+      keysRef.current.add('shoot');
+    };
+
+    const handleMouseUp = () => {
+      keysRef.current.delete('shoot');
+    };
+
+    const canvasEl = canvasRef.current;
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mouseup', handleMouseUp);
       cancelAnimationFrame(animationRef.current);
     };
   }, [showLevelComplete, showVictoryMenu]);
@@ -1101,7 +1115,7 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
               开始游戏
             </button>
             <p className="text-silver-gray mt-4 text-sm">收集所有星星，用子弹击败怪兽！</p>
-            <p className="text-silver-gray/50 mt-1 text-xs">键盘：方向键移动 / J或F射击 / 空格二段跳</p>
+            <p className="text-silver-gray/50 mt-1 text-xs">方向键移动 / 鼠标左键或J、F射击 / 空格二段跳</p>
           </div>
         )}
 
