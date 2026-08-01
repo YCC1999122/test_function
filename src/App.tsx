@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import PlatformGame from './components/PlatformGame';
+import MazeGame from './components/MazeGame';
 import ParticleBackground from './components/ParticleBackground';
 import HeroSection from './components/HeroSection';
 import Countdown from './components/Countdown';
@@ -8,21 +9,29 @@ import WishMessage from './components/WishMessage';
 import MusicPlayer from './components/MusicPlayer';
 import ShareButton from './components/ShareButton';
 
-type View = 'game' | 'birthday';
+type View = 'game1' | 'game2' | 'birthday';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<View>('game');
+  const [currentView, setCurrentView] = useState<View>('game1');
+
+  const handleEnterLevel2 = () => {
+    setCurrentView('game2');
+  };
 
   const handleEnterBirthday = () => {
     setCurrentView('birthday');
   };
 
   const handleBackToGame = () => {
-    setCurrentView('game');
+    setCurrentView('game1');
   };
 
-  if (currentView === 'game') {
-    return <PlatformGame onCompleteGame={handleEnterBirthday} />;
+  if (currentView === 'game1') {
+    return <PlatformGame onCompleteLevel1={handleEnterLevel2} />;
+  }
+
+  if (currentView === 'game2') {
+    return <MazeGame onCompleteGame={handleEnterBirthday} />;
   }
 
   return (

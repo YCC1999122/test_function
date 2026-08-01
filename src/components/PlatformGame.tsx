@@ -293,7 +293,7 @@ const LEVELS: Level[] = [
   },
 ];
 
-const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
+const PlatformGame = ({ onCompleteLevel1 }: { onCompleteLevel1: () => void }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [currentLevel, setCurrentLevel] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -1139,18 +1139,18 @@ const PlatformGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         {showVictoryMenu && (
           <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-black/80 rounded-lg">
             <div className="text-center" style={{ width: '100%' }}>
-              <Star className="w-20 h-20 text-yellow-400 mx-auto mb-4 animate-pulse" />
+              <Trophy className="w-20 h-20 text-yellow-400 mx-auto mb-4 animate-pulse" />
               <h2 className="text-4xl font-bold text-white font-display mb-2 gradient-text">
-                🎉 恭喜通关! 🎉
+                第一关完成!
               </h2>
               <p className="text-silver-gray mb-2">你收集了所有星星!</p>
-              <p className="text-light-gray mb-8">这是给你的特别惊喜</p>
+              <p className="text-light-gray mb-8">准备好进入迷宫探险了吗？</p>
               <button
-                onClick={() => { stopBGM(); onCompleteGame(); }}
+                onClick={() => { stopBGM(); onCompleteLevel1(); }}
                 className="inline-flex items-center gap-2 px-10 py-5 bg-gradient-to-r from-neon-blue via-neon-purple to-pink-500 text-white font-bold rounded-full hover:scale-110 transition-transform shadow-lg shadow-neon-blue/30"
               >
-                <Star className="w-6 h-6" />
-                打开惊喜
+                <ArrowRight className="w-6 h-6" />
+                进入第二关
               </button>
             </div>
           </div>
