@@ -2,6 +2,7 @@ import { useState } from 'react';
 import PlatformGame from './components/PlatformGame';
 import MazeGame from './components/MazeGame';
 import FPSGame from './components/FPSGame';
+import EvolutionGame from './components/EvolutionGame';
 import ParticleBackground from './components/ParticleBackground';
 import HeroSection from './components/HeroSection';
 import Countdown from './components/Countdown';
@@ -10,7 +11,7 @@ import WishMessage from './components/WishMessage';
 import MusicPlayer from './components/MusicPlayer';
 import ShareButton from './components/ShareButton';
 
-type View = 'game1' | 'game2' | 'game3' | 'birthday';
+type View = 'game1' | 'game2' | 'game3' | 'game4' | 'birthday';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('game1');
@@ -21,6 +22,10 @@ export default function App() {
 
   const handleEnterLevel3 = () => {
     setCurrentView('game3');
+  };
+
+  const handleEnterLevel4 = () => {
+    setCurrentView('game4');
   };
 
   const handleEnterBirthday = () => {
@@ -40,7 +45,11 @@ export default function App() {
   }
 
   if (currentView === 'game3') {
-    return <FPSGame onCompleteGame={handleEnterBirthday} />;
+    return <FPSGame onCompleteGame={handleEnterLevel4} />;
+  }
+
+  if (currentView === 'game4') {
+    return <EvolutionGame onCompleteGame={handleEnterBirthday} />;
   }
 
   return (
