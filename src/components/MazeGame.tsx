@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Play, RotateCcw, Star, ArrowRight } from 'lucide-react';
+import { Play, RotateCcw, Star, ArrowRight, ArrowLeft, ArrowUp, ArrowDown } from 'lucide-react';
 import { useGameAudio } from './GameAudio';
 
 const CANVAS_SIZE = 900;
@@ -115,7 +115,7 @@ function mazeToWalls(grid: MazeCell[][]): WallSeg[] {
   return walls;
 }
 
-const MazeGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
+const MazeGame = ({ onCompleteGame }: { onCompleteGame?: () => void }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showVictory, setShowVictory] = useState(false);
@@ -130,6 +130,7 @@ const MazeGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
   const bulletsRef = useRef<Bullet[]>([]);
   const keysRef = useRef<Set<string>>(new Set());
   const mouseRef = useRef({ x: CANVAS_SIZE / 2, y: CANVAS_SIZE / 2 });
+  const lastMoveDirectionRef = useRef({ x: 1, y: 0 });
   const isPlayingRef = useRef(false);
   const animationRef = useRef<number>(0);
   const timeRef = useRef(0);
@@ -373,6 +374,7 @@ const MazeGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     if (mx !== 0 || my !== 0) {
       const len = Math.sqrt(mx * mx + my * my);
       mx /= len; my /= len;
+      lastMoveDirectionRef.current = { x: mx, y: my };
     }
 
     const rad = 11;
@@ -383,8 +385,12 @@ const MazeGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     p.x = Math.max(rad, Math.min(CANVAS_SIZE - rad, p.x));
     p.y = Math.max(rad, Math.min(CANVAS_SIZE - rad, p.y));
 
-    // Face mouse
-    p.facing = Math.atan2(mouseRef.current.y - p.y, mouseRef.current.x - p.x);
+    const isTouchDevice = typeof window !== 'undefined' && (window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0);
+    if (isTouchDevice && (mx !== 0 || my !== 0)) {
+      p.facing = Math.atan2(lastMoveDirectionRef.current.y, lastMoveDirectionRef.current.x);
+    } else {
+      p.facing = Math.atan2(mouseRef.current.y - p.y, mouseRef.current.x - p.x);
+    }
 
     // Shoot
     if (p.shootCooldown > 0) p.shootCooldown--;
@@ -512,12 +518,18 @@ const MazeGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       mouseRef.current.x = (e.clientX - rect.left) / scale;
       mouseRef.current.y = (e.clientY - rect.top) / scale;
     };
+    const handlePointerMove = (e: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseRef.current.x = (e.clientX - rect.left) / scale;
+      mouseRef.current.y = (e.clientY - rect.top) / scale;
+    };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mouseup', handleMouseUp);
     canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('pointermove', handlePointerMove);
 
     if (isPlaying) {
       animationRef.current = requestAnimationFrame(() => update(ctx));
@@ -531,12 +543,23 @@ const MazeGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
       canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('pointermove', handlePointerMove);
       cancelAnimationFrame(animationRef.current);
     };
   }, [isPlaying, showVictory, update, draw, scale]);
 
   const handleStart = () => { initLevel(); setIsPlaying(true); startBGM(); };
   const handleRestart = () => { initLevel(); setShowVictory(false); setIsPlaying(true); };
+  const handleTouchStart = useCallback((direction: 'left' | 'right' | 'up' | 'down' | 'shoot') => (e: React.TouchEvent | React.MouseEvent) => {
+    e.preventDefault();
+    if (!isPlayingRef.current || showVictory) return;
+    keysRef.current.add(direction);
+  }, [showVictory]);
+
+  const handleTouchEnd = useCallback((direction: 'left' | 'right' | 'up' | 'down' | 'shoot') => (e: React.TouchEvent | React.MouseEvent) => {
+    e.preventDefault();
+    keysRef.current.delete(direction);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-deep-blue to-charcoal flex flex-col items-center justify-start p-2 md:p-4 md:justify-center">
@@ -584,7 +607,7 @@ const MazeGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
                 <p className="text-silver-gray mb-2">你找到了礼物！</p>
                 <p className="text-light-gray mb-8">这是给你的特别惊喜</p>
                 <button
-                  onClick={() => { stopBGM(); onCompleteGame(); }}
+                  onClick={() => { stopBGM(); onCompleteGame?.(); }}
                   className="inline-flex items-center gap-2 px-10 py-5 bg-gradient-to-r from-neon-blue via-neon-purple to-pink-500 text-white font-bold rounded-full hover:scale-110 transition-transform shadow-lg shadow-neon-blue/30"
                 >
                   <Star className="w-6 h-6" />
@@ -595,6 +618,69 @@ const MazeGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="mt-3 md:hidden flex gap-3 select-none justify-center flex-wrap">
+        <button
+          onTouchStart={handleTouchStart('left')}
+          onTouchEnd={handleTouchEnd('left')}
+          onTouchCancel={handleTouchEnd('left')}
+          onMouseDown={handleTouchStart('left')}
+          onMouseUp={handleTouchEnd('left')}
+          onMouseLeave={handleTouchEnd('left')}
+          className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
+          style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+        >
+          <ArrowLeft className="w-6 h-6" />
+        </button>
+        <button
+          onTouchStart={handleTouchStart('up')}
+          onTouchEnd={handleTouchEnd('up')}
+          onTouchCancel={handleTouchEnd('up')}
+          onMouseDown={handleTouchStart('up')}
+          onMouseUp={handleTouchEnd('up')}
+          onMouseLeave={handleTouchEnd('up')}
+          className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
+          style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+        >
+          <ArrowUp className="w-6 h-6" />
+        </button>
+        <button
+          onTouchStart={handleTouchStart('down')}
+          onTouchEnd={handleTouchEnd('down')}
+          onTouchCancel={handleTouchEnd('down')}
+          onMouseDown={handleTouchStart('down')}
+          onMouseUp={handleTouchEnd('down')}
+          onMouseLeave={handleTouchEnd('down')}
+          className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
+          style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+        >
+          <ArrowDown className="w-6 h-6" />
+        </button>
+        <button
+          onTouchStart={handleTouchStart('right')}
+          onTouchEnd={handleTouchEnd('right')}
+          onTouchCancel={handleTouchEnd('right')}
+          onMouseDown={handleTouchStart('right')}
+          onMouseUp={handleTouchEnd('right')}
+          onMouseLeave={handleTouchEnd('right')}
+          className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
+          style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+        >
+          <ArrowRight className="w-6 h-6" />
+        </button>
+        <button
+          onTouchStart={handleTouchStart('shoot')}
+          onTouchEnd={handleTouchEnd('shoot')}
+          onTouchCancel={handleTouchEnd('shoot')}
+          onMouseDown={handleTouchStart('shoot')}
+          onMouseUp={handleTouchEnd('shoot')}
+          onMouseLeave={handleTouchEnd('shoot')}
+          className="w-16 h-16 rounded-full bg-gradient-to-r from-neon-blue to-neon-purple flex items-center justify-center text-white active:scale-95 transition-transform touch-none"
+          style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+        >
+          <span className="text-2xl">🔥</span>
+        </button>
       </div>
 
       {isPlaying && (
