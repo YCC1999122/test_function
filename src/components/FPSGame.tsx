@@ -93,17 +93,19 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
   const goalRef = useRef({ x: MAP_DIM - 1.5, y: MAP_DIM - 1.5 });
   const damageFlashRef = useRef(0);
   const cameraShakeRef = useRef(0);
+  const jumpVelocityRef = useRef(0);
+  const jumpOffsetRef = useRef(0);
 
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
   useEffect(() => { pointerLockedRef.current = pointerLocked; }, [pointerLocked]);
 
-  const handleTouchStart = useCallback((direction: 'forward' | 'backward' | 'left' | 'right' | 'shoot') => (e: React.TouchEvent | React.MouseEvent) => {
+  const handleTouchStart = useCallback((direction: 'forward' | 'backward' | 'left' | 'right' | 'shoot' | 'jump') => (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     if (!isPlayingRef.current || showVictory) return;
     keysRef.current.add(direction);
   }, [showVictory]);
 
-  const handleTouchEnd = useCallback((direction: 'forward' | 'backward' | 'left' | 'right' | 'shoot') => (e: React.TouchEvent | React.MouseEvent) => {
+  const handleTouchEnd = useCallback((direction: 'forward' | 'backward' | 'left' | 'right' | 'shoot' | 'jump') => (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     keysRef.current.delete(direction);
   }, []);
@@ -154,6 +156,9 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     keysRef.current.clear();
     shootAnimRef.current = 0;
     damageFlashRef.current = 0;
+    cameraShakeRef.current = 0;
+    jumpVelocityRef.current = 0;
+    jumpOffsetRef.current = 0;
     setEnemiesLeft(enemies.length);
   }, []);
 
@@ -181,10 +186,8 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
 
       if (keys.has('w') || keys.has('arrowup') || keys.has('forward')) { mx += p.dirX; my += p.dirY; }
       if (keys.has('s') || keys.has('arrowdown') || keys.has('backward')) { mx -= p.dirX; my -= p.dirY; }
-      if (keys.has('a') || keys.has('left')) { mx -= p.planeY; my += p.planeX; }
-      if (keys.has('d') || keys.has('right')) { mx += p.planeY; my -= p.planeX; }
-      if (keys.has('arrowleft')) { mx -= p.planeY; my += p.planeX; }
-      if (keys.has('arrowright')) { mx += p.planeY; my -= p.planeX; }
+      if (keys.has('a') || keys.has('left') || keys.has('arrowleft')) { mx -= p.planeY; my += p.planeX; }
+      if (keys.has('d') || keys.has('right') || keys.has('arrowright')) { mx += p.planeY; my -= p.planeX; }
 
       const len = Math.sqrt(mx * mx + my * my);
       if (len > 0) {
@@ -192,6 +195,18 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         my = (my / len) * MOVE_SPEED;
         if (!isWall(p.x + mx, p.y)) p.x += mx;
         if (!isWall(p.x, p.y + my)) p.y += my;
+      }
+
+      const jumpPressed = keys.has('jump') || keys.has(' ');
+      if (jumpPressed && jumpVelocityRef.current === 0 && jumpOffsetRef.current === 0) {
+        jumpVelocityRef.current = 0.2;
+      }
+
+      jumpVelocityRef.current -= 0.011;
+      jumpOffsetRef.current += jumpVelocityRef.current;
+      if (jumpOffsetRef.current < 0) {
+        jumpOffsetRef.current = 0;
+        jumpVelocityRef.current = 0;
       }
     };
 
@@ -281,6 +296,9 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       ctx.save();
       ctx.translate(shakeX, shakeY);
 
+      ctx.save();
+      ctx.translate(0, -jumpOffsetRef.current * 28);
+
       // Ceiling
       const ceilGrad = ctx.createLinearGradient(0, 0, 0, SCREEN_H / 2);
       ceilGrad.addColorStop(0, '#0c1630');
@@ -334,23 +352,14 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         const drawEnd = Math.min(SCREEN_H, lineH / 2 + SCREEN_H / 2);
         const wallHeight = drawEnd - drawStart;
 
-        const stripe = Math.sin((mapX * 0.9 + mapY * 0.6 + x * 0.05)) * 0.5 + 0.5;
-        const hue = 180 + Math.round((mapX * 18 + mapY * 12 + x * 0.12) % 180);
-        const lightness = Math.max(48, 82 - perpDist * 2.6 + stripe * 10);
-        const stripeBand = Math.sin((mapX + mapY) * 1.5 + x * 0.16) * 0.5 + 0.5;
+        const wallTone = Math.max(54, 78 - perpDist * 2.2);
+        const wallShade = 82 + Math.sin((mapX + mapY + x) * 0.15) * 4;
 
-        ctx.fillStyle = `hsl(${hue}, 86%, ${lightness}%)`;
+        ctx.fillStyle = `hsl(${190 + Math.round((mapX * 8 + mapY * 5) % 20)}, 55%, ${wallTone}%)`;
         ctx.fillRect(x, drawStart, 1, wallHeight);
 
-        if (stripeBand > 0.62) {
-          ctx.fillStyle = `rgba(255,255,255,${0.16 + stripe * 0.18})`;
-          ctx.fillRect(x, drawStart + 4, 1, Math.max(1, wallHeight * 0.42));
-        }
-
-        if (stripeBand < 0.38) {
-          ctx.fillStyle = `rgba(0,0,0,${0.12 + (1 - stripe) * 0.12})`;
-          ctx.fillRect(x, drawStart + Math.max(2, wallHeight * 0.32), 1, Math.max(1, wallHeight * 0.3));
-        }
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.05 + wallShade / 300})`;
+        ctx.fillRect(x, drawStart + 2, 1, Math.max(1, wallHeight - 4));
       }
     };
 
@@ -597,12 +606,21 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isPlayingRef.current || showVictory) return;
       const k = e.key.toLowerCase();
+      if (e.code === 'Space') {
+        e.preventDefault();
+        keysRef.current.add('jump');
+        return;
+      }
       keysRef.current.add(k);
       if ((k === 'j' || k === 'f') && pointerLockedRef.current) {
         handleShoot();
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        keysRef.current.delete('jump');
+        return;
+      }
       keysRef.current.delete(e.key.toLowerCase());
     };
     const handleMouseMove = (e: MouseEvent) => {
@@ -658,6 +676,7 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       renderEnemies();
       drawGun();
       drawCrosshair();
+      ctx.restore();
       drawDamageFlash();
       drawMiniMap();
       drawNavArrow();
@@ -804,7 +823,9 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
           <span>•</span>
           <span>A/D 左右</span>
           <span>•</span>
-          <span>射击键：火焰</span>
+          <span>跳跃：空格 / 跳跃</span>
+          <span>•</span>
+          <span>射击：火焰</span>
         </div>
         <button
           onTouchStart={handleTouchStart('forward')}
@@ -857,6 +878,19 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
           aria-label="后退"
         >
           <span className="text-2xl">⬇️</span>
+        </button>
+        <button
+          onTouchStart={handleTouchStart('jump')}
+          onTouchEnd={handleTouchEnd('jump')}
+          onTouchCancel={handleTouchEnd('jump')}
+          onMouseDown={handleTouchStart('jump')}
+          onMouseUp={handleTouchEnd('jump')}
+          onMouseLeave={handleTouchEnd('jump')}
+          className="w-16 h-16 rounded-full bg-gradient-to-r from-cyan-400 to-sky-500 flex items-center justify-center text-white active:scale-95 transition-transform touch-none"
+          style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+          aria-label="跳跃"
+        >
+          <span className="text-2xl">⤒</span>
         </button>
         <button
           onTouchStart={handleTouchStart('shoot')}
