@@ -4,8 +4,8 @@ import { useGameAudio } from './GameAudio';
 
 const SCREEN_W = 800;
 const SCREEN_H = 500;
-const HALF_DIM = 8; // 17x17 grid
-const MAP_DIM = HALF_DIM * 2 + 1; // 17
+const HALF_DIM = 10; // 21x21 grid
+const MAP_DIM = HALF_DIM * 2 + 1; // 21
 const FOV_PLANE = 0.66;
 const MOVE_SPEED = 0.045;
 const PLAYER_RAD = 0.25;
@@ -352,13 +352,13 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         const drawEnd = Math.min(SCREEN_H, lineH / 2 + SCREEN_H / 2);
         const wallHeight = drawEnd - drawStart;
 
-        const wallTone = Math.max(54, 78 - perpDist * 2.2);
-        const wallShade = 82 + Math.sin((mapX + mapY + x) * 0.15) * 4;
+        const wallTone = Math.max(34, 58 - perpDist * 1.7);
+        const wallShade = 60 + Math.sin((mapX + mapY + x) * 0.15) * 3;
 
-        ctx.fillStyle = `hsl(${190 + Math.round((mapX * 8 + mapY * 5) % 20)}, 55%, ${wallTone}%)`;
+        ctx.fillStyle = `hsl(${190 + Math.round((mapX * 8 + mapY * 5) % 20)}, 48%, ${wallTone}%)`;
         ctx.fillRect(x, drawStart, 1, wallHeight);
 
-        ctx.fillStyle = `rgba(255, 255, 255, ${0.05 + wallShade / 300})`;
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.02 + wallShade / 340})`;
         ctx.fillRect(x, drawStart + 2, 1, Math.max(1, wallHeight - 4));
       }
     };
