@@ -7,8 +7,8 @@ const CANVAS_H = 560;
 const PLAYER_W = 28;
 const PLAYER_H = 54;
 const GRAVITY = 0.72;
-const MOVE_SPEED = 3.2;
-const JUMP_VELOCITY = -11.5;
+const MOVE_SPEED = 3.45;
+const JUMP_VELOCITY = -13.4;
 const ATTACK_RANGE = 58;
 
 type Facing = 1 | -1;
@@ -59,19 +59,20 @@ interface Crystal {
 }
 
 const BASE_PLATFORMS: Platform[] = [
-  { x: 0, y: 520, w: 900, h: 40, color: '#234261' },
-  { x: 120, y: 420, w: 170, h: 18, color: '#4c8dff' },
-  { x: 360, y: 350, w: 150, h: 18, color: '#9b5cff' },
-  { x: 610, y: 290, w: 150, h: 18, color: '#ff9f1c' },
-  { x: 725, y: 210, w: 110, h: 18, color: '#22c55e' },
-  { x: 520, y: 160, w: 120, h: 18, color: '#f43f5e' },
+  { x: 0, y: 520, w: 900, h: 40, color: '#22314a' },
+  { x: 80, y: 445, w: 140, h: 18, color: '#4a90ff' },
+  { x: 245, y: 390, w: 125, h: 18, color: '#7c4dff' },
+  { x: 430, y: 330, w: 130, h: 18, color: '#f59e0b' },
+  { x: 590, y: 270, w: 120, h: 18, color: '#22c55e' },
+  { x: 730, y: 210, w: 120, h: 18, color: '#f43f5e' },
+  { x: 610, y: 145, w: 135, h: 18, color: '#38bdf8' },
 ];
 
 const CRYSTALS: Crystal[] = [
-  { x: 160, y: 378, color: '#22d3ee', label: 'Jump', collected: false },
-  { x: 420, y: 308, color: '#facc15', label: 'Maze', collected: false },
-  { x: 670, y: 248, color: '#f97316', label: 'Shoot', collected: false },
-  { x: 775, y: 168, color: '#a855f7', label: 'Final', collected: false },
+  { x: 120, y: 405, color: '#22d3ee', label: 'Jump', collected: false },
+  { x: 310, y: 350, color: '#facc15', label: 'Maze', collected: false },
+  { x: 655, y: 230, color: '#f97316', label: 'Shoot', collected: false },
+  { x: 785, y: 170, color: '#a855f7', label: 'Final', collected: false },
 ];
 
 const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
@@ -85,7 +86,7 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
 
   const playerRef = useRef<Player>({
     x: 80,
-    y: 440,
+    y: CANVAS_H - 40 - PLAYER_H,
     w: PLAYER_W,
     h: PLAYER_H,
     vx: 0,
@@ -148,7 +149,7 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     crystalsRef.current = CRYSTALS.map((crystal) => ({ ...crystal, collected: false }));
     playerRef.current = {
       x: 80,
-      y: 440,
+      y: CANVAS_H - 40 - PLAYER_H,
       w: PLAYER_W,
       h: PLAYER_H,
       vx: 0,
@@ -210,18 +211,6 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
 
     const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-    const getGroundY = (entity: { x: number; y: number; w: number; h: number }) => {
-      let groundY = CANVAS_H - 40;
-      for (const platform of platformsRef.current) {
-        const overlapX = entity.x < platform.x + platform.w && entity.x + entity.w > platform.x;
-        const isAbove = entity.y + entity.h <= platform.y + 12 && entity.y + entity.h >= platform.y - 5;
-        if (overlapX && isAbove) {
-          groundY = Math.min(groundY, platform.y - entity.h);
-        }
-      }
-      return groundY;
-    };
-
     const updatePlayer = () => {
       const p = playerRef.current;
       const keys = keysRef.current;
@@ -229,6 +218,9 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       const moveRight = keys.has('d') || keys.has('arrowright');
       const wantsJump = keys.has('jump') || keys.has('w') || keys.has('arrowup');
       const wantsAttack = keys.has('attack') || keys.has('f');
+
+      const previousY = p.y;
+      const previousBottom = previousY + p.h;
 
       let dir = 0;
       if (moveLeft) dir -= 1;
@@ -250,9 +242,22 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       p.x += p.vx;
       p.y += p.vy;
 
-      const groundY = getGroundY(p);
-      if (p.y + p.h >= groundY) {
-        p.y = groundY;
+      let landedOnPlatform = false;
+      let targetY = CANVAS_H - 40 - p.h;
+
+      for (const platform of platformsRef.current) {
+        const overlapX = p.x < platform.x + platform.w && p.x + p.w > platform.x;
+        const currentBottom = p.y + p.h;
+        const isLandingFromAbove = p.vy >= 0 && previousBottom <= platform.y + 8 && currentBottom >= platform.y;
+
+        if (overlapX && isLandingFromAbove) {
+          targetY = Math.min(targetY, platform.y - p.h);
+          landedOnPlatform = true;
+        }
+      }
+
+      if (landedOnPlatform) {
+        p.y = targetY;
         p.vy = 0;
         p.onGround = true;
       } else {
@@ -296,17 +301,26 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
 
     const drawBackground = () => {
       const gradient = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
-      gradient.addColorStop(0, '#08111f');
-      gradient.addColorStop(0.55, '#11325b');
-      gradient.addColorStop(1, '#1a0d39');
+      gradient.addColorStop(0, '#071120');
+      gradient.addColorStop(0.52, '#102a4e');
+      gradient.addColorStop(1, '#180b36');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
       ctx.fillStyle = 'rgba(255,255,255,0.05)';
-      for (let i = 0; i < 12; i++) {
+      for (let i = 0; i < 16; i++) {
         ctx.beginPath();
-        ctx.arc(60 + i * 70, 55 + (i % 3) * 22, 2.2, 0, Math.PI * 2);
+        ctx.arc(50 + i * 55, 44 + (i % 4) * 18, 1.8 + (i % 3) * 0.4, 0, Math.PI * 2);
         ctx.fill();
+      }
+
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 7; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, 90 + i * 68);
+        ctx.lineTo(CANVAS_W, 80 + i * 68);
+        ctx.stroke();
       }
     };
 
@@ -314,10 +328,12 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       platformsRef.current.forEach((platform, index) => {
         ctx.fillStyle = platform.color;
         ctx.fillRect(platform.x, platform.y, platform.w, platform.h);
-        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.32)';
         ctx.strokeRect(platform.x, platform.y, platform.w, platform.h);
-        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.fillStyle = 'rgba(255,255,255,0.16)';
         ctx.fillRect(platform.x, platform.y, platform.w, 4);
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.fillRect(platform.x, platform.y + platform.h - 4, platform.w, 4);
         if (index === 0) {
           ctx.fillStyle = 'rgba(255,255,255,0.08)';
           ctx.fillRect(platform.x, platform.y + 8, platform.w, 10);
@@ -486,7 +502,7 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
           <span className="gradient-text">Evolution Trial - Stage 4</span>
         </h1>
         <p className="text-silver-gray/60 text-xs md:text-sm">
-          Walk, jump, fight, collect four fragments, and finish the final evolution.
+          A clearer jump path, stronger platform rhythm, and a final combat evolution stage.
         </p>
       </div>
 
@@ -505,7 +521,7 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
                 <Play className="w-6 h-6" />
                 Enter Evolution Trial
               </button>
-              <p className="text-silver-gray mt-4 text-sm">This is the final evolution stage: move, jump, punch monsters, and collect four fragments.</p>
+              <p className="text-silver-gray mt-4 text-sm">The route is now clearer: run, jump across the rising platforms, then punch monsters and collect four fragments.</p>
               <p className="text-silver-gray/50 mt-1 text-xs">Arrow keys / WASD to move · Space to jump · J/F to attack</p>
             </div>
           )}
