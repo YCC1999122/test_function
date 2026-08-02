@@ -92,6 +92,7 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
   const timeRef = useRef(0);
   const goalRef = useRef({ x: MAP_DIM - 1.5, y: MAP_DIM - 1.5 });
   const damageFlashRef = useRef(0);
+  const cameraShakeRef = useRef(0);
 
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
   useEffect(() => { pointerLockedRef.current = pointerLocked; }, [pointerLocked]);
@@ -239,6 +240,7 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     const handleShoot = () => {
       if (shootAnimRef.current > 0) return;
       shootAnimRef.current = 8;
+      cameraShakeRef.current = 0.55;
       select();
 
       // Hitscan: check enemies near center of screen
@@ -274,19 +276,24 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       const p = playerRef.current;
       const zBuf = zBufferRef.current;
 
+      const shakeX = (Math.random() - 0.5) * cameraShakeRef.current * 6;
+      const shakeY = (Math.random() - 0.5) * cameraShakeRef.current * 4;
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+
       // Ceiling
       const ceilGrad = ctx.createLinearGradient(0, 0, 0, SCREEN_H / 2);
-      ceilGrad.addColorStop(0, '#09111f');
-      ceilGrad.addColorStop(0.5, '#13364f');
-      ceilGrad.addColorStop(1, '#214d69');
+      ceilGrad.addColorStop(0, '#0c1630');
+      ceilGrad.addColorStop(0.45, '#1f4c87');
+      ceilGrad.addColorStop(1, '#4b8ad9');
       ctx.fillStyle = ceilGrad;
       ctx.fillRect(0, 0, SCREEN_W, SCREEN_H / 2);
 
       // Floor
       const floorGrad = ctx.createLinearGradient(0, SCREEN_H / 2, 0, SCREEN_H);
-      floorGrad.addColorStop(0, '#24566c');
-      floorGrad.addColorStop(0.5, '#0f5a6d');
-      floorGrad.addColorStop(1, '#15263e');
+      floorGrad.addColorStop(0, '#3875a6');
+      floorGrad.addColorStop(0.5, '#1f7ea7');
+      floorGrad.addColorStop(1, '#11243d');
       ctx.fillStyle = floorGrad;
       ctx.fillRect(0, SCREEN_H / 2, SCREEN_W, SCREEN_H / 2);
 
@@ -329,16 +336,21 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
 
         const stripe = Math.sin((mapX * 0.9 + mapY * 0.6 + x * 0.05)) * 0.5 + 0.5;
         const hue = 180 + Math.round((mapX * 18 + mapY * 12 + x * 0.12) % 180);
-        const lightness = Math.max(42, 72 - perpDist * 2.5 + stripe * 8);
+        const lightness = Math.max(48, 82 - perpDist * 2.6 + stripe * 10);
+        const stripeBand = Math.sin((mapX + mapY) * 1.5 + x * 0.16) * 0.5 + 0.5;
 
-        ctx.fillStyle = `hsl(${hue}, 78%, ${lightness}%)`;
+        ctx.fillStyle = `hsl(${hue}, 86%, ${lightness}%)`;
         ctx.fillRect(x, drawStart, 1, wallHeight);
 
-        ctx.fillStyle = `rgba(255, 255, 255, ${0.12 + stripe * 0.12})`;
-        ctx.fillRect(x, drawStart + 2, 1, Math.max(1, wallHeight - 4));
+        if (stripeBand > 0.62) {
+          ctx.fillStyle = `rgba(255,255,255,${0.16 + stripe * 0.18})`;
+          ctx.fillRect(x, drawStart + 4, 1, Math.max(1, wallHeight * 0.42));
+        }
 
-        ctx.fillStyle = `rgba(0, 0, 0, ${0.15 + (1 - stripe) * 0.08})`;
-        ctx.fillRect(x, drawStart + 6, 1, Math.max(1, wallHeight - 12));
+        if (stripeBand < 0.38) {
+          ctx.fillStyle = `rgba(0,0,0,${0.12 + (1 - stripe) * 0.12})`;
+          ctx.fillRect(x, drawStart + Math.max(2, wallHeight * 0.32), 1, Math.max(1, wallHeight * 0.3));
+        }
       }
     };
 
@@ -630,6 +642,7 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       timeRef.current += 0.016;
 
       if (shootAnimRef.current > 0) shootAnimRef.current--;
+      cameraShakeRef.current *= 0.88;
 
       const shouldMove = pointerLockedRef.current || navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
       if (shouldMove) {
@@ -649,6 +662,7 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       drawMiniMap();
       drawNavArrow();
       drawHUD();
+      ctx.restore();
 
       // Check gift collection
       const p = playerRef.current;
@@ -785,6 +799,13 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       </div>
 
       <div className="mt-3 md:hidden flex gap-3 select-none justify-center flex-wrap">
+        <div className="flex items-center gap-2 text-silver-gray/70 text-[11px] font-medium w-full justify-center mb-1">
+          <span>W/S 前后</span>
+          <span>•</span>
+          <span>A/D 左右</span>
+          <span>•</span>
+          <span>射击键：火焰</span>
+        </div>
         <button
           onTouchStart={handleTouchStart('forward')}
           onTouchEnd={handleTouchEnd('forward')}
@@ -794,6 +815,7 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
           onMouseLeave={handleTouchEnd('forward')}
           className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
           style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+          aria-label="前进"
         >
           <span className="text-2xl">⬆️</span>
         </button>
@@ -806,8 +828,9 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
           onMouseLeave={handleTouchEnd('left')}
           className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
           style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+          aria-label="向左平移"
         >
-          <span className="text-2xl">⬅️</span>
+          <span className="text-2xl">A</span>
         </button>
         <button
           onTouchStart={handleTouchStart('right')}
@@ -818,8 +841,9 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
           onMouseLeave={handleTouchEnd('right')}
           className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
           style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+          aria-label="向右平移"
         >
-          <span className="text-2xl">➡️</span>
+          <span className="text-2xl">D</span>
         </button>
         <button
           onTouchStart={handleTouchStart('backward')}
@@ -830,6 +854,7 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
           onMouseLeave={handleTouchEnd('backward')}
           className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
           style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+          aria-label="后退"
         >
           <span className="text-2xl">⬇️</span>
         </button>
@@ -842,6 +867,7 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
           onMouseLeave={handleTouchEnd('shoot')}
           className="w-16 h-16 rounded-full bg-gradient-to-r from-neon-blue to-neon-purple flex items-center justify-center text-white active:scale-95 transition-transform touch-none"
           style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+          aria-label="射击"
         >
           <span className="text-2xl">🔥</span>
         </button>
