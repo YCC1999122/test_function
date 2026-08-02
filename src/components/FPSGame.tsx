@@ -25,6 +25,7 @@ interface FPSEnemy {
   speed: number;
   wanderAngle: number;
   wanderTimer: number;
+  attackCooldown: number;
 }
 
 // Generate maze: 1=wall, 0=floor
@@ -77,7 +78,7 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
   const [pointerLocked, setPointerLocked] = useState(false);
   const [scale, setScale] = useState(1);
 
-  const { hit, select, victory: playVictory } = useGameAudio();
+  const { hit, select, victory: playVictory, pop } = useGameAudio();
 
   const gridRef = useRef<Grid>([]);
   const playerRef = useRef<FPSPlayer>({ x: 1.5, y: 1.5, dirX: 1, dirY: 0, planeX: 0, planeY: FOV_PLANE });
@@ -94,6 +95,17 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
 
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
   useEffect(() => { pointerLockedRef.current = pointerLocked; }, [pointerLocked]);
+
+  const handleTouchStart = useCallback((direction: 'forward' | 'backward' | 'left' | 'right' | 'shoot') => (e: React.TouchEvent | React.MouseEvent) => {
+    e.preventDefault();
+    if (!isPlayingRef.current || showVictory) return;
+    keysRef.current.add(direction);
+  }, [showVictory]);
+
+  const handleTouchEnd = useCallback((direction: 'forward' | 'backward' | 'left' | 'right' | 'shoot') => (e: React.TouchEvent | React.MouseEvent) => {
+    e.preventDefault();
+    keysRef.current.delete(direction);
+  }, []);
 
   useEffect(() => {
     const updateScale = () => {
@@ -133,6 +145,7 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         speed: 0.015 + Math.random() * 0.01,
         wanderAngle: Math.random() * Math.PI * 2,
         wanderTimer: Math.floor(Math.random() * 60),
+        attackCooldown: Math.floor(Math.random() * 30),
       });
     }
 
@@ -165,10 +178,10 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       const keys = keysRef.current;
       let mx = 0, my = 0;
 
-      if (keys.has('w') || keys.has('arrowup')) { mx += p.dirX; my += p.dirY; }
-      if (keys.has('s') || keys.has('arrowdown')) { mx -= p.dirX; my -= p.dirY; }
-      if (keys.has('a')) { mx -= p.planeY; my += p.planeX; }
-      if (keys.has('d')) { mx += p.planeY; my -= p.planeX; }
+      if (keys.has('w') || keys.has('arrowup') || keys.has('forward')) { mx += p.dirX; my += p.dirY; }
+      if (keys.has('s') || keys.has('arrowdown') || keys.has('backward')) { mx -= p.dirX; my -= p.dirY; }
+      if (keys.has('a') || keys.has('left')) { mx -= p.planeY; my += p.planeX; }
+      if (keys.has('d') || keys.has('right')) { mx += p.planeY; my -= p.planeX; }
       if (keys.has('arrowleft')) { mx -= p.planeY; my += p.planeX; }
       if (keys.has('arrowright')) { mx += p.planeY; my -= p.planeX; }
 
@@ -186,6 +199,7 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       for (const e of enemiesRef.current) {
         if (!e.alive) continue;
         if (e.hitFlash > 0) e.hitFlash--;
+        if (e.attackCooldown > 0) e.attackCooldown--;
         e.wanderTimer++;
         if (e.wanderTimer > 40 + Math.random() * 60) {
           e.wanderAngle = Math.random() * Math.PI * 2;
@@ -206,6 +220,11 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
 
         if (!isWall(e.x + mvx, e.y)) e.x += mvx;
         if (!isWall(e.x, e.y + mvy)) e.y += mvy;
+
+        if (dist < 3.0 && e.attackCooldown <= 0) {
+          pop();
+          e.attackCooldown = 55;
+        }
 
         // Contact damage
         if (dist < 0.5) {
@@ -257,15 +276,17 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
 
       // Ceiling
       const ceilGrad = ctx.createLinearGradient(0, 0, 0, SCREEN_H / 2);
-      ceilGrad.addColorStop(0, '#050810');
-      ceilGrad.addColorStop(1, '#0f1525');
+      ceilGrad.addColorStop(0, '#09111f');
+      ceilGrad.addColorStop(0.5, '#13364f');
+      ceilGrad.addColorStop(1, '#214d69');
       ctx.fillStyle = ceilGrad;
       ctx.fillRect(0, 0, SCREEN_W, SCREEN_H / 2);
 
       // Floor
       const floorGrad = ctx.createLinearGradient(0, SCREEN_H / 2, 0, SCREEN_H);
-      floorGrad.addColorStop(0, '#0f1525');
-      floorGrad.addColorStop(1, '#1a1e2e');
+      floorGrad.addColorStop(0, '#24566c');
+      floorGrad.addColorStop(0.5, '#0f5a6d');
+      floorGrad.addColorStop(1, '#15263e');
       ctx.fillStyle = floorGrad;
       ctx.fillRect(0, SCREEN_H / 2, SCREEN_W, SCREEN_H / 2);
 
@@ -304,11 +325,20 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         const lineH = Math.floor(SCREEN_H / perpDist);
         const drawStart = Math.max(0, -lineH / 2 + SCREEN_H / 2);
         const drawEnd = Math.min(SCREEN_H, lineH / 2 + SCREEN_H / 2);
+        const wallHeight = drawEnd - drawStart;
 
-        const lightness = Math.max(8, 42 - perpDist * 2.5);
-        const hue = side === 0 ? 215 : 230;
-        ctx.fillStyle = `hsl(${hue}, 35%, ${lightness}%)`;
-        ctx.fillRect(x, drawStart, 1, drawEnd - drawStart);
+        const stripe = Math.sin((mapX * 0.9 + mapY * 0.6 + x * 0.05)) * 0.5 + 0.5;
+        const hue = 180 + Math.round((mapX * 18 + mapY * 12 + x * 0.12) % 180);
+        const lightness = Math.max(42, 72 - perpDist * 2.5 + stripe * 8);
+
+        ctx.fillStyle = `hsl(${hue}, 78%, ${lightness}%)`;
+        ctx.fillRect(x, drawStart, 1, wallHeight);
+
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.12 + stripe * 0.12})`;
+        ctx.fillRect(x, drawStart + 2, 1, Math.max(1, wallHeight - 4));
+
+        ctx.fillStyle = `rgba(0, 0, 0, ${0.15 + (1 - stripe) * 0.08})`;
+        ctx.fillRect(x, drawStart + 6, 1, Math.max(1, wallHeight - 12));
       }
     };
 
@@ -601,10 +631,10 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
 
       if (shootAnimRef.current > 0) shootAnimRef.current--;
 
-      if (pointerLockedRef.current) {
+      const shouldMove = pointerLockedRef.current || navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
+      if (shouldMove) {
         updatePlayer();
         updateEnemies();
-        // Continuous fire when holding shoot key
         if (keysRef.current.has('shoot') && shootAnimRef.current <= 0) {
           handleShoot();
         }
@@ -665,18 +695,24 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
   const handleStart = () => {
     initLevel();
     setIsPlaying(true);
-    setTimeout(() => {
-      canvasRef.current?.requestPointerLock();
-    }, 100);
+    const isTouchDevice = navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
+    if (!isTouchDevice) {
+      setTimeout(() => {
+        canvasRef.current?.requestPointerLock();
+      }, 100);
+    }
   };
 
   const handleRestart = () => {
     initLevel();
     setShowVictory(false);
     setIsPlaying(true);
-    setTimeout(() => {
-      canvasRef.current?.requestPointerLock();
-    }, 100);
+    const isTouchDevice = navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
+    if (!isTouchDevice) {
+      setTimeout(() => {
+        canvasRef.current?.requestPointerLock();
+      }, 100);
+    }
   };
 
   return (
@@ -746,6 +782,69 @@ const FPSGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="mt-3 md:hidden flex gap-3 select-none justify-center flex-wrap">
+        <button
+          onTouchStart={handleTouchStart('forward')}
+          onTouchEnd={handleTouchEnd('forward')}
+          onTouchCancel={handleTouchEnd('forward')}
+          onMouseDown={handleTouchStart('forward')}
+          onMouseUp={handleTouchEnd('forward')}
+          onMouseLeave={handleTouchEnd('forward')}
+          className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
+          style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+        >
+          <span className="text-2xl">⬆️</span>
+        </button>
+        <button
+          onTouchStart={handleTouchStart('left')}
+          onTouchEnd={handleTouchEnd('left')}
+          onTouchCancel={handleTouchEnd('left')}
+          onMouseDown={handleTouchStart('left')}
+          onMouseUp={handleTouchEnd('left')}
+          onMouseLeave={handleTouchEnd('left')}
+          className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
+          style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+        >
+          <span className="text-2xl">⬅️</span>
+        </button>
+        <button
+          onTouchStart={handleTouchStart('right')}
+          onTouchEnd={handleTouchEnd('right')}
+          onTouchCancel={handleTouchEnd('right')}
+          onMouseDown={handleTouchStart('right')}
+          onMouseUp={handleTouchEnd('right')}
+          onMouseLeave={handleTouchEnd('right')}
+          className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
+          style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+        >
+          <span className="text-2xl">➡️</span>
+        </button>
+        <button
+          onTouchStart={handleTouchStart('backward')}
+          onTouchEnd={handleTouchEnd('backward')}
+          onTouchCancel={handleTouchEnd('backward')}
+          onMouseDown={handleTouchStart('backward')}
+          onMouseUp={handleTouchEnd('backward')}
+          onMouseLeave={handleTouchEnd('backward')}
+          className="w-16 h-16 rounded-full glass-effect flex items-center justify-center text-white active:bg-neon-blue/40 transition-colors touch-none"
+          style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+        >
+          <span className="text-2xl">⬇️</span>
+        </button>
+        <button
+          onTouchStart={handleTouchStart('shoot')}
+          onTouchEnd={handleTouchEnd('shoot')}
+          onTouchCancel={handleTouchEnd('shoot')}
+          onMouseDown={handleTouchStart('shoot')}
+          onMouseUp={handleTouchEnd('shoot')}
+          onMouseLeave={handleTouchEnd('shoot')}
+          className="w-16 h-16 rounded-full bg-gradient-to-r from-neon-blue to-neon-purple flex items-center justify-center text-white active:scale-95 transition-transform touch-none"
+          style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+        >
+          <span className="text-2xl">🔥</span>
+        </button>
       </div>
 
       <div className="mt-3 flex gap-4">
