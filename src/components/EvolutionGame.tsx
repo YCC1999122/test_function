@@ -59,13 +59,13 @@ interface Crystal {
 }
 
 const BASE_PLATFORMS: Platform[] = [
-  { x: 0, y: 520, w: 900, h: 40, color: '#22314a' },
-  { x: 80, y: 445, w: 140, h: 18, color: '#4a90ff' },
-  { x: 245, y: 390, w: 125, h: 18, color: '#7c4dff' },
-  { x: 430, y: 330, w: 130, h: 18, color: '#f59e0b' },
-  { x: 590, y: 270, w: 120, h: 18, color: '#22c55e' },
-  { x: 730, y: 210, w: 120, h: 18, color: '#f43f5e' },
-  { x: 610, y: 145, w: 135, h: 18, color: '#38bdf8' },
+  { x: 0, y: 520, w: 900, h: 40, color: '#1d3557' },
+  { x: 70, y: 455, w: 140, h: 18, color: '#4a90ff' },
+  { x: 230, y: 400, w: 130, h: 18, color: '#7c4dff' },
+  { x: 405, y: 340, w: 145, h: 18, color: '#f59e0b' },
+  { x: 585, y: 280, w: 120, h: 18, color: '#22c55e' },
+  { x: 725, y: 220, w: 120, h: 18, color: '#f43f5e' },
+  { x: 615, y: 150, w: 130, h: 18, color: '#38bdf8' },
 ];
 
 const CRYSTALS: Crystal[] = [
@@ -301,25 +301,30 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
 
     const drawBackground = () => {
       const gradient = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
-      gradient.addColorStop(0, '#071120');
-      gradient.addColorStop(0.52, '#102a4e');
-      gradient.addColorStop(1, '#180b36');
+      gradient.addColorStop(0, '#06101d');
+      gradient.addColorStop(0.48, '#10264a');
+      gradient.addColorStop(1, '#1a0935');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-      ctx.fillStyle = 'rgba(255,255,255,0.05)';
-      for (let i = 0; i < 16; i++) {
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      for (let i = 0; i < 18; i++) {
         ctx.beginPath();
-        ctx.arc(50 + i * 55, 44 + (i % 4) * 18, 1.8 + (i % 3) * 0.4, 0, Math.PI * 2);
+        ctx.arc(45 + i * 48, 46 + (i % 4) * 15, 1.8 + (i % 3) * 0.45, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
-      ctx.lineWidth = 1;
-      for (let i = 0; i < 7; i++) {
+      ctx.fillStyle = 'rgba(34, 211, 238, 0.10)';
+      ctx.beginPath();
+      ctx.ellipse(450, 130, 300, 75, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(95, 225, 255, 0.18)';
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i < 6; i++) {
         ctx.beginPath();
-        ctx.moveTo(0, 90 + i * 68);
-        ctx.lineTo(CANVAS_W, 80 + i * 68);
+        ctx.moveTo(0, 110 + i * 72);
+        ctx.lineTo(CANVAS_W, 90 + i * 72);
         ctx.stroke();
       }
     };
@@ -328,15 +333,25 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       platformsRef.current.forEach((platform, index) => {
         ctx.fillStyle = platform.color;
         ctx.fillRect(platform.x, platform.y, platform.w, platform.h);
-        ctx.strokeStyle = 'rgba(255,255,255,0.32)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
         ctx.strokeRect(platform.x, platform.y, platform.w, platform.h);
         ctx.fillStyle = 'rgba(255,255,255,0.16)';
         ctx.fillRect(platform.x, platform.y, platform.w, 4);
-        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
         ctx.fillRect(platform.x, platform.y + platform.h - 4, platform.w, 4);
+
+        ctx.beginPath();
+        ctx.moveTo(platform.x + 10, platform.y + platform.h);
+        ctx.lineTo(platform.x + platform.w - 12, platform.y + platform.h);
+        ctx.lineTo(platform.x + platform.w - 6, platform.y + platform.h + 8);
+        ctx.lineTo(platform.x + 16, platform.y + platform.h + 8);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(10, 16, 30, 0.34)';
+        ctx.fill();
+
         if (index === 0) {
-          ctx.fillStyle = 'rgba(255,255,255,0.08)';
-          ctx.fillRect(platform.x, platform.y + 8, platform.w, 10);
+          ctx.fillStyle = 'rgba(255,255,255,0.09)';
+          ctx.fillRect(platform.x, platform.y + 7, platform.w, 8);
         }
       });
     };
@@ -347,17 +362,21 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         ctx.save();
         ctx.translate(crystal.x, crystal.y);
         ctx.shadowColor = crystal.color;
-        ctx.shadowBlur = 16;
+        ctx.shadowBlur = 18;
         ctx.fillStyle = crystal.color;
         ctx.beginPath();
-        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+        ctx.moveTo(0, -12);
+        ctx.lineTo(10, -1);
+        ctx.lineTo(0, 12);
+        ctx.lineTo(-10, -1);
+        ctx.closePath();
         ctx.fill();
         ctx.restore();
 
         ctx.fillStyle = '#e5e7eb';
         ctx.font = '12px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(crystal.label, crystal.x, crystal.y - 16);
+        ctx.fillText(crystal.label, crystal.x, crystal.y - 18);
       });
     };
 
@@ -366,31 +385,33 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       ctx.save();
       ctx.translate(p.x, p.y);
 
-      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fillStyle = 'rgba(0,0,0,0.24)';
       ctx.beginPath();
-      ctx.ellipse(p.w / 2, p.h + 8, 16, 6, 0, 0, Math.PI * 2);
+      ctx.ellipse(p.w / 2, p.h + 7, 15, 5, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#f9d4c5';
-      ctx.fillRect(8, 8, 12, 12);
-      ctx.fillStyle = '#1f2937';
-      ctx.fillRect(7, 4, 14, 14);
-      ctx.fillStyle = '#60a5fa';
-      ctx.fillRect(5, 18, 18, 18);
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(4, 36, 7, 16);
-      ctx.fillRect(17, 36, 7, 16);
-      ctx.fillStyle = '#60a5fa';
-      ctx.fillRect(0, 18, 4, 14);
-      ctx.fillRect(24, 18, 4, 14);
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(8, 30, 12, 4);
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(4, 6, 8, 8);
+      ctx.fillStyle = '#2dd4bf';
+      ctx.fillRect(6, 14, 16, 16);
+      ctx.fillStyle = '#111827';
+      ctx.fillRect(5, 2, 18, 12);
+      ctx.fillStyle = '#e5e7eb';
+      ctx.fillRect(10, 8, 3, 3);
+      ctx.fillRect(16, 8, 3, 3);
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(2, 30, 6, 14);
+      ctx.fillRect(20, 30, 6, 14);
+      ctx.fillStyle = '#1d4ed8';
+      ctx.fillRect(0, 16, 4, 14);
+      ctx.fillRect(24, 16, 4, 14);
 
       if (p.attackTimer > 0) {
         ctx.strokeStyle = '#facc15';
         ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.arc(p.facing === 1 ? p.w + 8 : -8, 28, 12, 0, Math.PI * 2);
+        ctx.arc(p.facing === 1 ? p.w + 10 : -10, 24, 11, 0, Math.PI * 2);
         ctx.stroke();
       }
 
@@ -403,9 +424,12 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         ctx.save();
         ctx.translate(enemy.x, enemy.y);
         ctx.fillStyle = enemy.hitFlash > 0 ? '#ffffff' : '#ef4444';
-        ctx.fillRect(0, 0, enemy.w, enemy.h);
+        ctx.beginPath();
+        ctx.arc(enemy.w / 2, enemy.h / 2, 14, 0, Math.PI * 2);
+        ctx.fill();
         ctx.strokeStyle = '#111827';
-        ctx.strokeRect(0, 0, enemy.w, enemy.h);
+        ctx.lineWidth = 2;
+        ctx.stroke();
         ctx.fillStyle = '#0b1120';
         ctx.fillRect(0, -8, enemy.w, 6);
         ctx.fillStyle = '#22c55e';
@@ -415,14 +439,21 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     };
 
     const drawHUD = () => {
-      ctx.fillStyle = 'rgba(2, 6, 23, 0.6)';
-      ctx.fillRect(12, 12, 260, 50);
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.65)';
+      ctx.fillRect(12, 12, 290, 52);
       ctx.fillStyle = '#f8fafc';
       ctx.font = '15px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('Evolution Trial - Stage 4', 24, 32);
+      ctx.fillText('Evolution Trial · Stage 4', 24, 32);
       ctx.fillStyle = '#67e8f9';
       ctx.fillText(`Fragments ${crystalsLeft}/4`, 24, 51);
+
+      const portalActive = crystalsLeft === 0;
+      ctx.fillStyle = portalActive ? '#facc15' : '#94a3b8';
+      ctx.fillRect(432, 18, 145, 12);
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '11px Arial';
+      ctx.fillText(portalActive ? 'Portal ready' : 'Collect all fragments', 448, 28);
     };
 
     const loop = () => {
@@ -438,6 +469,22 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       drawEnemies();
       drawPlayer();
       drawHUD();
+
+      const portalActive = crystalsLeft === 0;
+      if (portalActive) {
+        ctx.save();
+        ctx.translate(820, 110);
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(0, 0, 26, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(250, 204, 21, 0.25)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
 
       if (crystalsLeft <= 0) {
         playVictory();
