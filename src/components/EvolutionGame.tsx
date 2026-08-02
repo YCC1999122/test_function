@@ -68,10 +68,10 @@ const BASE_PLATFORMS: Platform[] = [
 ];
 
 const CRYSTALS: Crystal[] = [
-  { x: 160, y: 378, color: '#22d3ee', label: '跳跃', collected: false },
-  { x: 420, y: 308, color: '#facc15', label: '迷宫', collected: false },
-  { x: 670, y: 248, color: '#f97316', label: '射击', collected: false },
-  { x: 775, y: 168, color: '#a855f7', label: '终局', collected: false },
+  { x: 160, y: 378, color: '#22d3ee', label: 'Jump', collected: false },
+  { x: 420, y: 308, color: '#facc15', label: 'Maze', collected: false },
+  { x: 670, y: 248, color: '#f97316', label: 'Shoot', collected: false },
+  { x: 775, y: 168, color: '#a855f7', label: 'Final', collected: false },
 ];
 
 const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
@@ -404,9 +404,9 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       ctx.fillStyle = '#f8fafc';
       ctx.font = '15px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('进化遗迹第四关', 24, 32);
+      ctx.fillText('Evolution Trial - Stage 4', 24, 32);
       ctx.fillStyle = '#67e8f9';
-      ctx.fillText(`进化碎片：${crystalsLeft}/4`, 24, 51);
+      ctx.fillText(`Fragments ${crystalsLeft}/4`, 24, 51);
     };
 
     const loop = () => {
@@ -483,10 +483,10 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     <div className="min-h-screen bg-gradient-to-b from-deep-blue to-charcoal flex flex-col items-center justify-start p-2 md:p-4 md:justify-center">
       <div className="mb-2 text-center">
         <h1 className="text-xl md:text-3xl font-bold text-white font-display mb-1">
-          <span className="gradient-text">进化遗迹 - 第四关</span>
+          <span className="gradient-text">Evolution Trial - Stage 4</span>
         </h1>
         <p className="text-silver-gray/60 text-xs md:text-sm">
-          走路、跳跃、近战击打怪物，收集四颗进化碎片，完成最终演化
+          Walk, jump, fight, collect four fragments, and finish the final evolution.
         </p>
       </div>
 
@@ -503,10 +503,10 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-lg">
               <button onClick={handleStart} className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-neon-blue to-neon-purple text-white font-bold rounded-full hover:scale-105 transition-transform">
                 <Play className="w-6 h-6" />
-                进入进化遗迹
+                Enter Evolution Trial
               </button>
-              <p className="text-silver-gray mt-4 text-sm">第三关的进化结果：你要走、跳、挥拳打怪，收集四颗进化碎片。</p>
-              <p className="text-silver-gray/50 mt-1 text-xs">方向键/WASD 移动 · 空格跳跃 · J/F 近战攻击</p>
+              <p className="text-silver-gray mt-4 text-sm">This is the final evolution stage: move, jump, punch monsters, and collect four fragments.</p>
+              <p className="text-silver-gray/50 mt-1 text-xs">Arrow keys / WASD to move 路 Space to jump 路 J/F to attack</p>
             </div>
           )}
 
@@ -514,12 +514,12 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded-lg">
               <div className="text-center" style={{ width: '100%' }}>
                 <Star className="w-20 h-20 text-yellow-400 mx-auto mb-4 animate-pulse" />
-                <h2 className="text-4xl font-bold text-white font-display mb-2 gradient-text">?? 进化完成！ ??</h2>
-                <p className="text-silver-gray mb-2">你已经完成了从跳跃到迷宫再到射击的全过程演化。</p>
-                <p className="text-light-gray mb-8">现在进入最终惊喜</p>
+                <h2 className="text-4xl font-bold text-white font-display mb-2 gradient-text">Evolution Complete!</h2>
+                <p className="text-silver-gray mb-2">You have completed the final evolution from movement to combat and collected every fragment.</p>
+                <p className="text-light-gray mb-8">Now enter the final birthday surprise.</p>
                 <button onClick={() => onCompleteGame()} className="inline-flex items-center gap-2 px-10 py-5 bg-gradient-to-r from-neon-blue via-neon-purple to-pink-500 text-white font-bold rounded-full hover:scale-110 transition-transform shadow-lg shadow-neon-blue/30">
                   <Star className="w-6 h-6" />
-                  打开惊喜
+                  Open Surprise
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
@@ -530,11 +530,11 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
 
       <div className="mt-3 md:hidden flex gap-3 select-none justify-center flex-wrap">
         <div className="flex items-center gap-2 text-silver-gray/70 text-[11px] font-medium w-full justify-center mb-1">
-          <span>移动</span>
+          <span>锟狡讹拷</span>
           <span>?</span>
-          <span>跳跃</span>
+          <span>锟斤拷跃</span>
           <span>?</span>
-          <span>攻击</span>
+          <span>锟斤拷锟斤拷</span>
         </div>
         <button onTouchStart={handleTouchStart('jump')} onTouchEnd={handleTouchEnd('jump')} onMouseDown={handleTouchStart('jump')} onMouseUp={handleTouchEnd('jump')} className="w-16 h-16 rounded-full bg-gradient-to-r from-cyan-400 to-sky-500 flex items-center justify-center text-white active:scale-95 transition-transform touch-none">
           <span className="text-2xl">?</span>
@@ -552,7 +552,7 @@ const EvolutionGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
 
       <div className="mt-3 flex gap-4">
         <button onClick={handleRestart} className="flex items-center gap-2 px-4 py-2 glass-effect rounded-full text-silver-gray hover:text-neon-blue transition-colors text-xs md:text-base">
-          <RotateCcw className="w-4 h-4" />重新开始
+          <RotateCcw className="w-4 h-4" />锟斤拷锟铰匡拷始
         </button>
       </div>
     </div>
