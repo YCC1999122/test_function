@@ -889,109 +889,237 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         ctx.setLineDash([]);
       }
 
-      const s = player.w / 32;
-
-      // Draw the little girl character (adapted from PlatformGame)
+      const s = player.w / 36;
       const cx = player.w / 2;
-      const cy = 12 * s;
+      const bodyTop = -2 * s;
+      const bodyBot = 16 * s;
+      const flash = player.hitFlash > 0 && player.hitFlash % 2 === 0;
+
+      // ── Animation parameters ──
+      const isWalking = Math.abs(player.vx) > 0.5 && player.onGround;
+      const isAttacking = player.attackTimer > 0;
+      const walkCycle = frame * 0.12;
+      const legSwing = isWalking ? Math.sin(walkCycle) * 0.4 : 0;
+      const armSwing = isWalking ? Math.sin(walkCycle + Math.PI) * 0.25 : 0;
+      const attackArmAngle = isAttacking ? (player.attackTimer / 10) * 1.5 : 0;
+      const breathe = Math.sin(frame * 0.03) * 0.5;
+      const facing = player.facing;
+
+      // Colors
+      const skinColor = flash ? '#ffffff' : '#ffe0d0';
+      const dressColor = flash ? '#e0c0ff' : '#9d4edd';
+      const dressStroke = flash ? '#c0a0e0' : '#7c3aed';
+      const shoeColor = flash ? '#666666' : '#2d1810';
+      const hairColor = flash ? '#ffccdd' : '#ff6b9d';
+
+      // ── Helper: draw limb ──
+      const drawLimb = (ox: number, oy: number, len: number, angle: number, thickness: number, color: string) => {
+        ctx.save();
+        ctx.translate(ox, oy);
+        ctx.rotate(angle);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.roundRect(-thickness / 2, 0, thickness, len, thickness / 2);
+        ctx.fill();
+        ctx.restore();
+        return { x: ox + Math.sin(angle) * len, y: oy + Math.cos(angle) * len };
+      };
+
+      // ── HEAD (centered at cx, bodyTop) ──
+      const headY = bodyTop - 2 * s;
 
       // Hair buns
-      const bunColor = player.hitFlash > 0 && player.hitFlash % 2 === 0 ? '#ffffff' : '#ff6b9d';
-      ctx.fillStyle = bunColor;
+      ctx.fillStyle = hairColor;
       ctx.beginPath();
-      ctx.ellipse(cx, -10 * s, 12 * s, 6 * s, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, headY - 4 * s, 10 * s, 5 * s, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(cx - 8 * s, -6 * s, 5 * s, 0, Math.PI * 2);
+      ctx.arc(cx - 7 * s, headY - 2 * s, 4 * s, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(cx + 8 * s, -6 * s, 5 * s, 0, Math.PI * 2);
+      ctx.arc(cx + 7 * s, headY - 2 * s, 4 * s, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Hair back
+      ctx.fillStyle = hairColor;
+      ctx.beginPath();
+      ctx.ellipse(cx, headY, 10 * s, 6 * s, 0, Math.PI, Math.PI * 2);
       ctx.fill();
 
       // Face
       ctx.fillStyle = '#2d1810';
       ctx.beginPath();
-      ctx.ellipse(cx, -4 * s, 9 * s, 7 * s, 0, Math.PI, Math.PI * 2);
+      ctx.ellipse(cx, headY + 1 * s, 8 * s, 6 * s, 0, Math.PI, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#ffe0d0';
+      ctx.fillStyle = skinColor;
       ctx.beginPath();
-      ctx.arc(cx, -2 * s, 6 * s, 0, Math.PI * 2);
+      ctx.arc(cx, headY + 2 * s, 5.5 * s, 0, Math.PI * 2);
       ctx.fill();
 
       // Eyes
       ctx.fillStyle = '#2d1810';
       ctx.beginPath();
-      ctx.arc(cx - 2.5 * s, -3 * s, 1.2 * s, 0, Math.PI * 2);
+      ctx.arc(cx - 2 * s, headY + 1 * s, 1.2 * s, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(cx + 2.5 * s, -3 * s, 1.2 * s, 0, Math.PI * 2);
+      ctx.arc(cx + 2 * s, headY + 1 * s, 1.2 * s, 0, Math.PI * 2);
       ctx.fill();
 
       // Mouth
       ctx.strokeStyle = '#ff6b9d';
-      ctx.lineWidth = 0.8 * s;
+      ctx.lineWidth = 0.7 * s;
       ctx.beginPath();
-      ctx.arc(cx, 0, 1.5 * s, 0.2, Math.PI - 0.2);
+      ctx.arc(cx, headY + 4 * s, 1.3 * s, 0.2, Math.PI - 0.2);
       ctx.stroke();
 
-      // Body (dress)
-      ctx.fillStyle = '#9d4edd';
+      // ── TORSO ──
+      const torsoTop = headY + 8 * s;
+      ctx.fillStyle = dressColor;
       ctx.beginPath();
-      ctx.moveTo(cx - 8 * s, 9 * s);
-      ctx.lineTo(cx - 5 * s, 7 * s);
-      ctx.lineTo(cx + 5 * s, 7 * s);
-      ctx.lineTo(cx + 8 * s, 9 * s);
-      ctx.lineTo(cx + 10 * s, 18 * s);
-      ctx.lineTo(cx - 10 * s, 18 * s);
+      const shoulderW = 7 * s;
+      ctx.moveTo(cx - shoulderW, torsoTop);
+      ctx.lineTo(cx - 6 * s, torsoTop + 2 * s);
+      ctx.lineTo(cx + 6 * s, torsoTop + 2 * s);
+      ctx.lineTo(cx + shoulderW, torsoTop);
+      ctx.lineTo(cx + 9 * s, bodyBot);
+      ctx.lineTo(cx - 9 * s, bodyBot);
       ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = '#7c3aed';
-      ctx.lineWidth = 0.6 * s;
+      ctx.strokeStyle = dressStroke;
+      ctx.lineWidth = 0.5 * s;
       ctx.stroke();
 
-      // Legs
-      ctx.fillStyle = '#ffe0d0';
+      // Dress detail line
+      ctx.strokeStyle = dressStroke;
+      ctx.lineWidth = 0.3 * s;
       ctx.beginPath();
-      ctx.roundRect(cx - 9 * s, 9 * s, 3 * s, 6 * s, 1.5 * s);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.roundRect(cx + 6 * s, 9 * s, 3 * s, 6 * s, 1.5 * s);
-      ctx.fill();
+      ctx.moveTo(cx, torsoTop + 2 * s);
+      ctx.lineTo(cx, bodyBot);
+      ctx.stroke();
 
-      // Shoes
-      ctx.fillStyle = '#2d1810';
-      ctx.beginPath();
-      ctx.roundRect(cx - 9 * s, 15 * s, 3.5 * s, 3 * s, 1 * s);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.roundRect(cx + 5.5 * s, 15 * s, 3.5 * s, 3 * s, 1 * s);
-      ctx.fill();
+      // ── SHOULDERS ──
+      const shoulderLY = torsoTop + 3 * s;
+      const shoulderRY = torsoTop + 3 * s;
 
-      // Weapon visual
+      // ── ARMS ──
+      // Left arm
+      const lShoulderX = cx - 6 * s;
+      const lUpperLen = s * 7;
+      const lUpperAngle = -0.3 + armSwing * facing + (isAttacking ? attackArmAngle * 0.4 * -facing : 0);
+      const lElbow = drawLimb(lShoulderX, shoulderLY + breathe, lUpperLen, lUpperAngle, 2.5 * s, skinColor);
+
+      const lForeLen = s * 6;
+      const lForeAngle = lUpperAngle + 0.2 + armSwing * 0.3;
+      drawLimb(lElbow.x, lElbow.y, lForeLen, lForeAngle, 2 * s, skinColor);
+
+      // Right arm
+      const rShoulderX = cx + 6 * s;
+      const rUpperLen = s * 7;
+      const rUpperAngle = -0.3 + armSwing * -facing + (isAttacking ? attackArmAngle * 0.4 * facing : 0);
+      const rElbow = drawLimb(rShoulderX, shoulderRY + breathe, rUpperLen, rUpperAngle, 2.5 * s, skinColor);
+
+      const rForeLen = s * 6;
+      const rForeAngle = rUpperAngle + 0.2 + armSwing * -0.3;
+      const rHand = drawLimb(rElbow.x, rElbow.y, rForeLen, rForeAngle, 2 * s, skinColor);
+
+      // Weapon held in right hand (or whichever is attacking side)
       if (player.weapon) {
-        ctx.fillStyle = player.weapon === 'sword' ? '#22d3ee' : '#f97316';
-        ctx.shadowColor = player.weapon === 'sword' ? '#22d3ee' : '#f97316';
-        ctx.shadowBlur = 8;
-        const wx = player.facing === 1 ? player.w - 4 : -8;
-        ctx.fillRect(wx, 4, 8, 20);
-        if (player.weapon === 'axe') {
-          ctx.fillRect(wx - 4, 2, 16, 6);
+        ctx.save();
+        ctx.translate(rHand.x, rHand.y);
+        ctx.rotate(rForeAngle + 0.3);
+        const wLen = s * 18;
+        if (player.weapon === 'sword') {
+          // Blade
+          ctx.fillStyle = '#e0e0e0';
+          ctx.fillRect(-s * 1.5, -s * 0.8, wLen, s * 1.6);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(wLen * 0.5, -s * 0.3, wLen * 0.5, s * 0.6);
+          // Guard
+          ctx.fillStyle = '#facc15';
+          ctx.fillRect(-s * 0.5, -s * 3, s * 4, s * 6);
+          // Handle
+          ctx.fillStyle = '#8b4513';
+          ctx.fillRect(-s * 2, -s * 1.5, s * 3, s * 3);
+        } else {
+          // Axe head
+          ctx.fillStyle = '#c0c0c0';
+          ctx.beginPath();
+          ctx.moveTo(wLen - s * 2, -s * 2);
+          ctx.lineTo(wLen + s * 4, -s * 5);
+          ctx.lineTo(wLen + s * 6, -s * 2);
+          ctx.lineTo(wLen + s * 4, s * 5);
+          ctx.lineTo(wLen - s * 2, s * 2);
+          ctx.closePath();
+          ctx.fill();
+          // Handle
+          ctx.fillStyle = '#8b4513';
+          ctx.fillRect(-s * 1, -s * 1, wLen, s * 2);
         }
+        ctx.shadowColor = player.weapon === 'sword' ? '#22d3ee' : '#f97316';
+        ctx.shadowBlur = 6;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.restore();
       }
 
-      // Attack slash effect
-      if (player.attackTimer > 0) {
-        const atkX = player.facing === 1 ? player.w : -55;
-        ctx.strokeStyle = `rgba(255, 255, 255, ${player.attackTimer / 10 * 0.6})`;
+      // ── LEGS ──
+      const hipY = bodyBot - 1 * s;
+      const hipX = cx;
+
+      // Left leg
+      const lHipX = hipX - 4 * s;
+      const lThighLen = s * 7;
+      const lThighAngle = -0.15 + legSwing;
+      const lKnee = drawLimb(lHipX, hipY, lThighLen, lThighAngle, 3 * s, skinColor);
+
+      const lShinLen = s * 6;
+      const lShinAngle = lThighAngle + 0.1 + (legSwing > 0 ? 0.2 : -0.1);
+      const lFoot = drawLimb(lKnee.x, lKnee.y, lShinLen, lShinAngle, 2.5 * s, skinColor);
+
+      // Left shoe
+      ctx.save();
+      ctx.translate(lFoot.x, lFoot.y);
+      ctx.rotate(lShinAngle);
+      ctx.fillStyle = shoeColor;
+      ctx.beginPath();
+      ctx.roundRect(-s * 2, -s * 0.5, s * 4, s * 2.5, s);
+      ctx.fill();
+      ctx.restore();
+
+      // Right leg
+      const rHipX = hipX + 4 * s;
+      const rThighLen = s * 7;
+      const rThighAngle = -0.15 - legSwing;
+      const rKnee = drawLimb(rHipX, hipY, rThighLen, rThighAngle, 3 * s, skinColor);
+
+      const rShinLen = s * 6;
+      const rShinAngle = rThighAngle + 0.1 + (legSwing < 0 ? 0.2 : -0.1);
+      const rFoot = drawLimb(rKnee.x, rKnee.y, rShinLen, rShinAngle, 2.5 * s, skinColor);
+
+      // Right shoe
+      ctx.save();
+      ctx.translate(rFoot.x, rFoot.y);
+      ctx.rotate(rShinAngle);
+      ctx.fillStyle = shoeColor;
+      ctx.beginPath();
+      ctx.roundRect(-s * 2, -s * 0.5, s * 4, s * 2.5, s);
+      ctx.fill();
+      ctx.restore();
+
+      // ── Attack slash VFX ──
+      if (isAttacking) {
+        const atkX = facing === 1 ? rHand.x + 30 : lShoulderX - 55;
+        const atkY = rHand.y;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${player.attackTimer / 10 * 0.7})`;
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(atkX + (player.facing === 1 ? 20 : 35), player.h / 2, 25, -0.5, 1.2);
+        ctx.arc(atkX, atkY, 30, -0.6, 1.3);
         ctx.stroke();
-        ctx.strokeStyle = `rgba(253, 224, 71, ${player.attackTimer / 10 * 0.8})`;
+        ctx.strokeStyle = `rgba(253, 224, 71, ${player.attackTimer / 10 * 0.9})`;
         ctx.lineWidth = 6;
         ctx.beginPath();
-        ctx.arc(atkX + (player.facing === 1 ? 20 : 35), player.h / 2, 20, -0.3, 1.0);
+        ctx.arc(atkX, atkY, 24, -0.4, 1.1);
         ctx.stroke();
       }
 
@@ -1102,11 +1230,19 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       ctx.arc(20 + (CANVAS_W - 40) * progress, CANVAS_H - 13, 5, 0, Math.PI * 2);
       ctx.fill();
 
+      // ── Control hints at top ──
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(CANVAS_W / 2 - 210, 56, 420, 22);
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.font = '10px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('🖱️ L=拳 | 🖱️ R=踢 | 🖱️ M=大招 | 🖱️ 4/5=跳/大招 | ⌨️ J拳 K踢 L大招', CANVAS_W / 2, 69);
+
       // Combo tip
       ctx.fillStyle = 'rgba(255,255,255,0.4)';
       ctx.font = '10px Arial';
       ctx.textAlign = 'right';
-      ctx.fillText('J=拳 K=踢 L=大招  连按J三连击', CANVAS_W - 20, CANVAS_H - 24);
+      ctx.fillText('A/D移动 W跳跃  静止不动=回血', CANVAS_W - 20, CANVAS_H - 24);
     };
 
     animRef.current = requestAnimationFrame(loop);
@@ -1133,6 +1269,47 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  // ── Mouse Controls ──
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (gameStateRef.current !== 'playing') return;
+      e.preventDefault();
+      switch (e.button) {
+        case 0: keysRef.current.add('j'); break;      // 左键=拳
+        case 1: keysRef.current.add('l'); break;      // 中键=大招
+        case 2: keysRef.current.add('k'); break;      // 右键=踢
+        case 3: keysRef.current.add('jump'); break;    // mouse4=跳跃
+        case 4: keysRef.current.add('l'); break;       // mouse5=大招
+      }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      switch (e.button) {
+        case 0: keysRef.current.delete('j'); break;
+        case 1: keysRef.current.delete('l'); break;
+        case 2: keysRef.current.delete('k'); break;
+        case 3: keysRef.current.delete('jump'); break;
+        case 4: keysRef.current.delete('l'); break;
+      }
+    };
+
+    const handleContextMenu = (e: Event) => {
+      e.preventDefault();
+    };
+
+    canvas.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('contextmenu', handleContextMenu);
+    return () => {
+      canvas.removeEventListener('mousedown', handleMouseDown);
+      canvas.removeEventListener('mouseup', handleMouseUp);
+      canvas.removeEventListener('contextmenu', handleContextMenu);
     };
   }, []);
 
@@ -1188,7 +1365,8 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
               </button>
               <div className="mt-6 text-silver-gray text-sm text-center max-w-md px-4 space-y-1">
                 <p><span className="text-neon-blue font-bold">A/D</span> 移动 · <span className="text-neon-blue font-bold">W/空格</span> 跳跃</p>
-                <p><span className="text-yellow-400 font-bold">J</span> 拳击（连按3次=三连击）· <span className="text-orange-400 font-bold">K</span> 踢击 · <span className="text-red-400 font-bold">L</span> 大招</p>
+                <p><span className="text-yellow-400 font-bold">🖱️左键</span> 拳击 · <span className="text-orange-400 font-bold">🖱️右键</span> 踢击 · <span className="text-red-400 font-bold">🖱️中键</span> 大招</p>
+                <p>连点🖱️左键3次=三连击 | <span className="text-purple-400 font-bold">🖱️侧键4</span>=跳跃 | <span className="text-purple-400 font-bold">🖱️侧键5</span>=大招</p>
                 <p>静止不动可<span className="text-green-400">缓慢回血</span>，路上有武器和道具</p>
                 <p className="text-silver-gray/60 text-xs">共5个区域 · 16个敌人 · 最终BOSS在终点</p>
               </div>
