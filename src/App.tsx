@@ -1,8 +1,8 @@
 import { useState } from 'react';
+import BeatEmUpGame from './components/BeatEmUpGame';
 import PlatformGame from './components/PlatformGame';
 import MazeGame from './components/MazeGame';
 import FPSGame from './components/FPSGame';
-import EvolutionGame from './components/EvolutionGame';
 import ParticleBackground from './components/ParticleBackground';
 import HeroSection from './components/HeroSection';
 import Countdown from './components/Countdown';
@@ -16,18 +16,22 @@ type View = 'game1' | 'game2' | 'game3' | 'game4' | 'birthday';
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('game1');
 
+  // game1: 横板格斗闯关 → game2: 迷宫探险
   const handleEnterLevel2 = () => {
     setCurrentView('game2');
   };
 
+  // game2: 迷宫探险 → game3: FPS射击
   const handleEnterLevel3 = () => {
     setCurrentView('game3');
   };
 
+  // game3: FPS射击 → game4: 平台跳跃
   const handleEnterLevel4 = () => {
     setCurrentView('game4');
   };
 
+  // game4: 平台跳跃 → 生日祝福
   const handleEnterBirthday = () => {
     setCurrentView('birthday');
   };
@@ -37,7 +41,7 @@ export default function App() {
   };
 
   if (currentView === 'game1') {
-    return <PlatformGame onCompleteLevel1={handleEnterLevel2} />;
+    return <BeatEmUpGame onCompleteGame={handleEnterLevel2} />;
   }
 
   if (currentView === 'game2') {
@@ -49,7 +53,7 @@ export default function App() {
   }
 
   if (currentView === 'game4') {
-    return <EvolutionGame onCompleteGame={handleEnterBirthday} />;
+    return <PlatformGame onCompleteLevel1={handleEnterBirthday} />;
   }
 
   return (

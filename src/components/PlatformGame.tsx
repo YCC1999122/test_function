@@ -1141,16 +1141,16 @@ const PlatformGame = ({ onCompleteLevel1 }: { onCompleteLevel1: () => void }) =>
             <div className="text-center" style={{ width: '100%' }}>
               <Trophy className="w-20 h-20 text-yellow-400 mx-auto mb-4 animate-pulse" />
               <h2 className="text-4xl font-bold text-white font-display mb-2 gradient-text">
-                第一关完成!
+                全部通关!
               </h2>
               <p className="text-silver-gray mb-2">你收集了所有星星!</p>
-              <p className="text-light-gray mb-8">准备好进入迷宫探险了吗？</p>
+              <p className="text-light-gray mb-8">准备好进入生日祝福了吗？</p>
               <button
                 onClick={() => { stopBGM(); onCompleteLevel1(); }}
                 className="inline-flex items-center gap-2 px-10 py-5 bg-gradient-to-r from-neon-blue via-neon-purple to-pink-500 text-white font-bold rounded-full hover:scale-110 transition-transform shadow-lg shadow-neon-blue/30"
               >
-                <ArrowRight className="w-6 h-6" />
-                进入第二关
+                <Star className="w-6 h-6" />
+                进入生日祝福
               </button>
             </div>
           </div>
