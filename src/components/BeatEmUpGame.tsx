@@ -3,11 +3,11 @@ import { Play, RotateCcw, Swords, Star } from 'lucide-react';
 import { useGameAudio } from './GameAudio';
 
 // ── Constants ──
-const CANVAS_W = 960;
-const CANVAS_H = 540;
+const CANVAS_W = 1280;
+const CANVAS_H = 720;
 const WORLD_W = 5600;
 const GRAVITY = 0.65;
-const GROUND_Y = CANVAS_H - 60;
+const GROUND_Y = CANVAS_H - 70;
 
 // Player (scaled up for more detail)
 const PLAYER_W = 42;
@@ -468,9 +468,9 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         addScreenShake(shakeAmount);
 
         const atkX = player.facing === 1 ? player.x + player.w : player.x - range;
-        const atkY = player.y + 8;
+        const atkY = player.y + 19;
         const atkW = range;
-        const atkH = player.h - 16;
+        const atkH = player.h - 24;
 
         addSlashTrail(atkX + (player.facing === 1 ? 0 : range), atkY + atkH / 2, player.facing, trailType, slashColor);
 
@@ -1389,10 +1389,10 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       ctx.save();
       ctx.translate(px, py);
 
-      // Shadow
+      // Shadow (at feet level)
       ctx.fillStyle = 'rgba(0,0,0,0.35)';
       ctx.beginPath();
-      ctx.ellipse(player.w / 2, player.h + 5, player.w / 2 + 2, 5, 0, 0, Math.PI * 2);
+      ctx.ellipse(player.w / 2, player.h, player.w / 2 + 2, 4, 0, 0, Math.PI * 2);
       ctx.fill();
 
       // Shield effect
@@ -1444,7 +1444,7 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       const headR = 5.5;             // smaller head radius
       const neckY = headY + headR;   // ~13.5
       const torsoTop = neckY + 1;    // ~14.5
-      const hipY = 44;               // hips at 44 (leaves 18px for legs)
+      const hipY = 43;               // hips at 43 (leaves 19px for legs)
       const bodyBot = hipY;          // bottom of torso = hip level
       const flash = player.hitFlash > 0 && player.hitFlash % 2 === 0;
       const isWalking = player.animState === 'walk';
@@ -1463,8 +1463,8 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       const moving = isWalking || isRunning;
       const legSwing = moving ? Math.sin(cycleSpeed) * 0.7 : 0;
       const armSwing = moving ? Math.sin(cycleSpeed + Math.PI) * 0.55 : 0;
-      // Body bounce: slight up/down when feet land
-      const bounceY = moving ? Math.abs(Math.sin(cycleSpeed)) * 3 : 0;
+      // Body bounce: subtle, feet stay grounded
+      const bounceY = moving ? Math.abs(Math.sin(cycleSpeed)) * 1.5 : 0;
       const jumpLegAngle = isJumpUp ? 0.5 : isJumpDown ? -0.3 : 0;
       const attackPhase = isAttacking ? ((10 - player.attackTimer) / 10) : 0;
       const breathe = Math.sin(frame * 0.04) * 0.5;
