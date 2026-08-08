@@ -1438,10 +1438,14 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       }
 
       // ── Animation state params ──
-      const s = player.w / 42; // scale factor for bigger model
-      const cx = player.w / 2;
-      const bodyTop = -4 * s;
-      const bodyBot = 18 * s;
+      // Use absolute pixel values for clear proportions (PLAYER_W=42, PLAYER_H=62)
+      const cx = player.w / 2;       // center X = 21
+      const headY = 8;               // head center Y (near top)
+      const headR = 5.5;             // smaller head radius
+      const neckY = headY + headR;   // ~13.5
+      const torsoTop = neckY + 1;    // ~14.5
+      const hipY = 44;               // hips at 44 (leaves 18px for legs)
+      const bodyBot = hipY;          // bottom of torso = hip level
       const flash = player.hitFlash > 0 && player.hitFlash % 2 === 0;
       const isWalking = player.animState === 'walk';
       const isRunning = player.animState === 'run';
@@ -1450,18 +1454,20 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       const isAttacking = player.animState === 'attack_special';
       const isHurt = player.animState === 'hurt';
       const isPickup = player.animState === 'pickup';
-      const turnT = player.turnProgress;
+      const facing = player.facing;
 
-      // Animation cycle
-      const walkCycle = frame * 0.15;
-      const runCycle = frame * 0.2;
+      // ── Walking bounce (fixes crab walk) ──
+      const walkCycle = frame * 0.18;
+      const runCycle = frame * 0.25;
       const cycleSpeed = isRunning ? runCycle : walkCycle;
-      const legSwing = (isWalking || isRunning) ? Math.sin(cycleSpeed) * 0.5 : 0;
-      const armSwing = (isWalking || isRunning) ? Math.sin(cycleSpeed + Math.PI) * 0.3 : 0;
+      const moving = isWalking || isRunning;
+      const legSwing = moving ? Math.sin(cycleSpeed) * 0.7 : 0;
+      const armSwing = moving ? Math.sin(cycleSpeed + Math.PI) * 0.55 : 0;
+      // Body bounce: slight up/down when feet land
+      const bounceY = moving ? Math.abs(Math.sin(cycleSpeed)) * 3 : 0;
       const jumpLegAngle = isJumpUp ? 0.5 : isJumpDown ? -0.3 : 0;
       const attackPhase = isAttacking ? ((10 - player.attackTimer) / 10) : 0;
-      const breathe = Math.sin(frame * 0.04) * 0.6;
-      const facing = player.facing;
+      const breathe = Math.sin(frame * 0.04) * 0.5;
 
       // Color palette
       const skinColor = flash ? '#ffffff' : '#ffe4d0';
@@ -1472,13 +1478,7 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       const hairDark = flash ? '#ffcce0' : '#e85d8a';
       const eyeColor = '#2d1810';
 
-      // Scale X for turning
-      const scaleX = turnT < 0.5 ? (turnT * 2) * (facing === 1 ? 1 : -1) : facing;
-
-      // ── Draw character ──
-      const headY = bodyTop - 3 * s;
-
-      // Helper
+      // ── Helper: draw rounded limb ──
       const drawLimb = (ox: number, oy: number, len: number, angle: number, tk: number, color: string) => {
         ctx.save();
         ctx.translate(ox, oy);
@@ -1491,48 +1491,38 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         return { x: ox + Math.sin(angle) * len, y: oy + Math.cos(angle) * len };
       };
 
-      // ── HAIR (behind) ──
-      ctx.fillStyle = hairDark;
-      ctx.beginPath();
-      ctx.ellipse(cx, headY, 11 * s, 8 * s, 0, Math.PI, Math.PI * 2);
-      ctx.fill();
-      // Hair side strands
-      ctx.fillStyle = hairTop;
-      ctx.fillRect(cx - 9 * s, headY + 2 * s, 2.5 * s, 5 * s);
-      ctx.fillRect(cx + 7 * s, headY + 2 * s, 2.5 * s, 5 * s);
+      // ── Apply body bounce ──
+      const byBase = bounceY;
 
-      // ── LEGS ──
-      const hipY = bodyBot;
-      const hipX = cx;
+      // ═══ LEGS (drawn first - behind dress) ═══
+      const lHipX = cx - 7;
+      const rHipX = cx + 7;
+      const thighLen = 11;
+      const shinLen = 9;
+      const hipBaseY = hipY - byBase;
 
       if (isJumpUp) {
-        // Tucked legs
-        const lHipX = hipX - 5 * s;
-        const rHipX = hipX + 5 * s;
-        drawLimb(lHipX, hipY, 6 * s, -0.6 + jumpLegAngle, 3.5 * s, skinColor);
-        drawLimb(rHipX, hipY, 6 * s, -0.6 - jumpLegAngle, 3.5 * s, skinColor);
-        // Shoes
+        drawLimb(lHipX, hipBaseY, 7, -0.5 + jumpLegAngle, 4, skinColor);
+        drawLimb(rHipX, hipBaseY, 7, -0.5 - jumpLegAngle, 4, skinColor);
         ctx.fillStyle = shoeColor;
         ctx.beginPath();
-        ctx.ellipse(lHipX + 2 * s, hipY + 5 * s, 3.5 * s, 3 * s, 0.3, 0, Math.PI * 2);
+        ctx.ellipse(lHipX + 3, hipBaseY + 6, 4, 3, 0.3, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.ellipse(rHipX - 2 * s, hipY + 5 * s, 3.5 * s, 3 * s, -0.3, 0, Math.PI * 2);
+        ctx.ellipse(rHipX - 3, hipBaseY + 6, 4, 3, -0.3, 0, Math.PI * 2);
         ctx.fill();
       } else {
-        // Normal legs
-        const lHipX = hipX - 5 * s;
-        const rHipX = hipX + 5 * s;
+        // Left leg
+        const lThighA = -0.15 + legSwing;
+        const lKnee = drawLimb(lHipX, hipBaseY, thighLen, lThighA, 4.5, skinColor);
+        const lShinA = lThighA + 0.2 + (legSwing > 0 ? 0.35 : -0.2);
+        const lFoot = drawLimb(lKnee.x, lKnee.y, shinLen, lShinA, 3.5, skinColor);
 
-        const lThighAngle = -0.1 + legSwing;
-        const lKnee = drawLimb(lHipX, hipY + breathe, 8 * s, lThighAngle, 3.5 * s, skinColor);
-        const lShinAngle = lThighAngle + 0.15 + (legSwing > 0 ? 0.25 : -0.15);
-        const lFoot = drawLimb(lKnee.x, lKnee.y, 7 * s, lShinAngle, 3 * s, skinColor);
-
-        const rThighAngle = -0.1 - legSwing;
-        const rKnee = drawLimb(rHipX, hipY + breathe, 8 * s, rThighAngle, 3.5 * s, skinColor);
-        const rShinAngle = rThighAngle + 0.15 + (legSwing < 0 ? 0.25 : -0.15);
-        const rFoot = drawLimb(rKnee.x, rKnee.y, 7 * s, rShinAngle, 3 * s, skinColor);
+        // Right leg
+        const rThighA = -0.15 - legSwing;
+        const rKnee = drawLimb(rHipX, hipBaseY, thighLen, rThighA, 4.5, skinColor);
+        const rShinA = rThighA + 0.2 + (legSwing < 0 ? 0.35 : -0.2);
+        const rFoot = drawLimb(rKnee.x, rKnee.y, shinLen, rShinA, 3.5, skinColor);
 
         // Shoes
         const drawShoe = (fx: number, fy: number, ang: number) => {
@@ -1541,215 +1531,212 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
           ctx.rotate(ang);
           ctx.fillStyle = shoeColor;
           ctx.beginPath();
-          ctx.roundRect(-3 * s, -1 * s, 6 * s, 3 * s, 1.5 * s);
+          ctx.roundRect(-4, -1, 8, 3.5, 2);
           ctx.fill();
           ctx.fillStyle = 'rgba(255,255,255,0.15)';
-          ctx.fillRect(-2 * s, -1 * s, 3 * s, 1.5 * s);
+          ctx.fillRect(-3, -1, 4, 2);
           ctx.restore();
         };
-        drawShoe(lFoot.x, lFoot.y, lShinAngle);
-        drawShoe(rFoot.x, rFoot.y, rShinAngle);
+        drawShoe(lFoot.x, lFoot.y, lShinA);
+        drawShoe(rFoot.x, rFoot.y, rShinA);
       }
 
-      // ── TORSO ──
-      const torsoTop = headY + 8 * s;
-      const leanAngle = isRunning ? 0.1 : isWalking ? 0.05 : 0;
+      // ═══ TORSO (dress) ═══
+      const torsoH = hipY - torsoTop; // ~29px
+      const leanAngle = isRunning ? 0.08 : isWalking ? 0.04 : 0;
 
       ctx.save();
-      ctx.translate(cx, torsoTop);
-      ctx.rotate(leanAngle);
-
+      ctx.translate(cx, torsoTop - byBase);
+      ctx.rotate(leanAngle * facing);
+      // Shadow under dress
       ctx.fillStyle = dressColor;
       ctx.beginPath();
-      const sw = 8 * s;
-      ctx.moveTo(-sw, 0);
-      ctx.lineTo(-7 * s, 2 * s);
-      ctx.lineTo(7 * s, 2 * s);
-      ctx.lineTo(sw, 0);
-      ctx.lineTo(10 * s, bodyBot - torsoTop);
-      ctx.lineTo(-10 * s, bodyBot - torsoTop);
+      ctx.moveTo(-9, 0);
+      ctx.lineTo(-8, 3);
+      ctx.lineTo(8, 3);
+      ctx.lineTo(9, 0);
+      ctx.lineTo(12, torsoH);
+      ctx.lineTo(-12, torsoH);
       ctx.closePath();
       ctx.fill();
       ctx.strokeStyle = dressDark;
-      ctx.lineWidth = 0.5 * s;
+      ctx.lineWidth = 0.8;
       ctx.stroke();
-
-      // Dress waist ribbon
+      // Waist ribbon
       ctx.fillStyle = '#fbbf24';
-      ctx.fillRect(-10.5 * s, bodyBot - torsoTop - 4 * s, 21 * s, 3 * s);
-
-      // Dress details
+      ctx.fillRect(-12.5, torsoH - 5, 25, 3.5);
+      // Center line
       ctx.strokeStyle = dressDark;
-      ctx.lineWidth = 0.4 * s;
+      ctx.lineWidth = 0.5;
       ctx.beginPath();
-      ctx.moveTo(0, 2 * s);
-      ctx.lineTo(0, bodyBot - torsoTop - 6 * s);
+      ctx.moveTo(0, 3);
+      ctx.lineTo(0, torsoH - 8);
       ctx.stroke();
-
       ctx.restore();
 
-      // ── ARMS ──
-      const shoulderY = torsoTop + 4 * s;
-      const lShoulderX = cx - 8 * s;
-      const rShoulderX = cx + 8 * s;
+      // ═══ ARMS ═══
+      const shoulderY = torsoTop + 5;
+      const lShoulderX = cx - 9;
+      const rShoulderX = cx + 9;
+      const upperLen = 9;
+      const foreLen = 8;
 
       if (isAttacking) {
-        // Attack pose - arms extended forward
-        const atkAngle = attackPhase < 0.5 ? -0.8 + attackPhase * 2 : -0.8 + (1 - attackPhase) * 2;
-        const lElbow = drawLimb(lShoulderX, shoulderY + breathe, 8 * s, -0.4, 3 * s, skinColor);
-        drawLimb(lElbow.x, lElbow.y, 7 * s, -0.2, 2.5 * s, skinColor);
-
-        const rUpper = drawLimb(rShoulderX, shoulderY + breathe, 8 * s, atkAngle * facing, 3 * s, skinColor);
-        const rHand = drawLimb(rUpper.x, rUpper.y, 7 * s, atkAngle * facing + 0.1, 2.5 * s, skinColor);
-
-        // Weapon in attacking hand
+        const atkAngle = attackPhase < 0.5 ? -0.7 + attackPhase * 2.5 : -0.7 + (1 - attackPhase) * 2.5;
+        // Left arm (back)
+        const lElbow = drawLimb(lShoulderX, shoulderY - byBase, upperLen, -0.3, 3.5, skinColor);
+        drawLimb(lElbow.x, lElbow.y, foreLen, -0.1, 3, skinColor);
+        // Right arm (attacking forward)
+        const rUpper = drawLimb(rShoulderX, shoulderY - byBase, upperLen, atkAngle * facing, 3.5, skinColor);
+        const rHand = drawLimb(rUpper.x, rUpper.y, foreLen, atkAngle * facing + 0.1, 3, skinColor);
         if (player.weapon && player.attackTimer > 2) {
           ctx.save();
           ctx.translate(rHand.x, rHand.y);
-          ctx.rotate(atkAngle * facing + 0.4);
-          drawWeapon(s, player.weapon);
+          ctx.rotate(atkAngle * facing + 0.5);
+          drawWeapon(1, player.weapon);
           ctx.restore();
         }
       } else if (isHurt) {
-        // Hurt recoil
-        drawLimb(lShoulderX, shoulderY + breathe, 8 * s, -0.8, 3 * s, skinColor);
-        drawLimb(rShoulderX, shoulderY + breathe, 8 * s, -0.8, 3 * s, skinColor);
+        drawLimb(lShoulderX, shoulderY - byBase, upperLen, -1.0, 3.5, skinColor);
+        drawLimb(rShoulderX, shoulderY - byBase, upperLen, -1.0, 3.5, skinColor);
       } else if (isPickup) {
-        // Arms up celebrating
-        const celAngle = -1.2 + Math.sin(player.pickupCelebrate * 0.4) * 0.3;
-        drawLimb(lShoulderX, shoulderY + breathe, 8 * s, celAngle, 3 * s, skinColor);
-        drawLimb(rShoulderX, shoulderY + breathe, 8 * s, celAngle, 3 * s, skinColor);
+        const celA = -1.4 + Math.sin(player.pickupCelebrate * 0.5) * 0.3;
+        drawLimb(lShoulderX, shoulderY - byBase, upperLen, celA, 3.5, skinColor);
+        drawLimb(rShoulderX, shoulderY - byBase, upperLen, celA, 3.5, skinColor);
       } else {
-        // Normal arm swing
-        const lElbow = drawLimb(lShoulderX, shoulderY + breathe, 8 * s, -0.2 + armSwing, 3 * s, skinColor);
-        drawLimb(lElbow.x, lElbow.y, 7 * s, -0.2 + armSwing * 0.5, 2.5 * s, skinColor);
+        // Walking arm swing - left arm forward when right leg forward
+        const lElbow = drawLimb(lShoulderX, shoulderY - byBase, upperLen, -0.2 + armSwing, 3.5, skinColor);
+        drawLimb(lElbow.x, lElbow.y, foreLen, -0.15 + armSwing * 0.5, 3, skinColor);
 
-        const rElbow = drawLimb(rShoulderX, shoulderY + breathe, 8 * s, -0.2 - armSwing, 3 * s, skinColor);
-        const rHand = drawLimb(rElbow.x, rElbow.y, 7 * s, -0.2 - armSwing * 0.5, 2.5 * s, skinColor);
+        const rElbow = drawLimb(rShoulderX, shoulderY - byBase, upperLen, -0.2 - armSwing, 3.5, skinColor);
+        const rHand = drawLimb(rElbow.x, rElbow.y, foreLen, -0.15 - armSwing * 0.5, 3, skinColor);
 
-        // Weapon in hand
         if (player.weapon) {
           ctx.save();
           ctx.translate(rHand.x, rHand.y);
-          ctx.rotate((-0.2 - armSwing * 0.5) + 0.5);
-          drawWeapon(s, player.weapon);
+          ctx.rotate((-0.15 - armSwing * 0.5) + 0.6);
+          drawWeapon(1, player.weapon);
           ctx.restore();
         }
       }
 
-      // ── HEAD ──
+      // ═══ HEAD (smaller, no rotation) ═══
+      const headCenterY = headY - byBase;
+
+      // Hair behind
+      ctx.fillStyle = hairDark;
+      ctx.beginPath();
+      ctx.ellipse(cx, headCenterY, headR + 4, headR + 2, 0, Math.PI, Math.PI * 2);
+      ctx.fill();
+      // Side strands
+      ctx.fillStyle = hairTop;
+      ctx.fillRect(cx - 8, headCenterY + 2, 2.5, 6);
+      ctx.fillRect(cx + 5.5, headCenterY + 2, 2.5, 6);
+
       // Hair top bun
       ctx.fillStyle = hairTop;
       ctx.beginPath();
-      ctx.ellipse(cx, headY - 5 * s, 11 * s, 6 * s, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, headCenterY - headR, headR + 4, headR - 1, 0, 0, Math.PI * 2);
       ctx.fill();
-      // Side buns
+      // Side hair
       ctx.beginPath();
-      ctx.arc(cx - 8 * s, headY - 3 * s, 5 * s, 0, Math.PI * 2);
+      ctx.arc(cx - 7, headCenterY - 2, 4, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(cx + 8 * s, headY - 3 * s, 5 * s, 0, Math.PI * 2);
+      ctx.arc(cx + 7, headCenterY - 2, 4, 0, Math.PI * 2);
       ctx.fill();
       // Hair front
-      ctx.fillStyle = hairTop;
       ctx.beginPath();
-      ctx.ellipse(cx, headY + 1 * s, 10 * s, 7 * s, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, headCenterY + 1, headR + 3, headR + 1, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Face base
+      // Face
       ctx.fillStyle = hairDark;
       ctx.beginPath();
-      ctx.ellipse(cx, headY + 2 * s, 9 * s, 6.5 * s, 0, Math.PI, Math.PI * 2);
+      ctx.ellipse(cx, headCenterY + 2, headR + 2, headR - 0.5, 0, Math.PI, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = skinColor;
       ctx.beginPath();
-      ctx.arc(cx, headY + 2.5 * s, 6 * s, 0, Math.PI * 2);
+      ctx.arc(cx, headCenterY + 2, headR - 1, 0, Math.PI * 2);
       ctx.fill();
 
-      // Eyes (with expression based on state)
-      let eyeOpenY = 0;
+      // Eyes
       let eyeClose = false;
-      if (isHurt) { eyeClose = player.hitFlash % 4 < 2; }
-      if (isAttacking) { eyeOpenY = -0.5 * s; }
+      if (isHurt) eyeClose = player.hitFlash % 4 < 2;
 
       if (!eyeClose) {
-        // White
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.ellipse(cx - 2.2 * s, headY + 1.5 * s + eyeOpenY, 2.2 * s, 2.2 * s, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx - 2.2, headCenterY + 1, 2, 2.2, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.ellipse(cx + 2.2 * s, headY + 1.5 * s + eyeOpenY, 2.2 * s, 2.2 * s, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx + 2.2, headCenterY + 1, 2, 2.2, 0, 0, Math.PI * 2);
         ctx.fill();
-        // Iris
         ctx.fillStyle = eyeColor;
         ctx.beginPath();
-        ctx.arc(cx - 1.8 * s, headY + 1.5 * s + eyeOpenY, 1.4 * s, 0, Math.PI * 2);
+        ctx.arc(cx - 1.8, headCenterY + 1, 1.3, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(cx + 2.6 * s, headY + 1.5 * s + eyeOpenY, 1.4 * s, 0, Math.PI * 2);
+        ctx.arc(cx + 2.6, headCenterY + 1, 1.3, 0, Math.PI * 2);
         ctx.fill();
-        // Highlight
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(cx - 1.2 * s, headY + 1 * s + eyeOpenY, 0.5 * s, 0, Math.PI * 2);
+        ctx.arc(cx - 1.2, headCenterY + 0.5, 0.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(cx + 3.2 * s, headY + 1 * s + eyeOpenY, 0.5 * s, 0, Math.PI * 2);
+        ctx.arc(cx + 3.2, headCenterY + 0.5, 0.5, 0, Math.PI * 2);
         ctx.fill();
       } else {
-        // Closed eyes (hurt)
         ctx.strokeStyle = eyeColor;
-        ctx.lineWidth = 1.5 * s;
+        ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.moveTo(cx - 4 * s, headY + 1.5 * s);
-        ctx.lineTo(cx - 0.5 * s, headY + 2.5 * s);
+        ctx.moveTo(cx - 4, headCenterY + 1);
+        ctx.lineTo(cx - 0.5, headCenterY + 2.5);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(cx + 4 * s, headY + 1.5 * s);
-        ctx.lineTo(cx + 0.5 * s, headY + 2.5 * s);
+        ctx.moveTo(cx + 4, headCenterY + 1);
+        ctx.lineTo(cx + 0.5, headCenterY + 2.5);
         ctx.stroke();
       }
 
-      // Eyebrows
+      // Brows
       ctx.strokeStyle = hairDark;
-      ctx.lineWidth = 0.7 * s;
-      const browAngle = isAttacking ? -0.3 : 0.1;
+      ctx.lineWidth = 0.7;
       ctx.beginPath();
-      ctx.moveTo(cx - 4 * s, headY - 0.5 * s);
-      ctx.quadraticCurveTo(cx - 2.2 * s, headY - 1.2 * s + browAngle, cx - 0.3 * s, headY - 0.5 * s);
+      ctx.moveTo(cx - 4, headCenterY - 0.5);
+      ctx.quadraticCurveTo(cx - 2, headCenterY - 1.5, cx, headCenterY - 0.3);
       ctx.stroke();
       ctx.beginPath();
-      ctx.moveTo(cx + 4 * s, headY - 0.5 * s);
-      ctx.quadraticCurveTo(cx + 2.2 * s, headY - 1.2 * s + browAngle, cx + 0.3 * s, headY - 0.5 * s);
+      ctx.moveTo(cx + 4, headCenterY - 0.5);
+      ctx.quadraticCurveTo(cx + 2, headCenterY - 1.5, cx, headCenterY - 0.3);
       ctx.stroke();
 
       // Mouth
-      let mouthY = headY + 4.5 * s;
+      let mouthY = headCenterY + 4;
       let mouthOpen = 0;
-      if (isAttacking && attackPhase > 0.3 && attackPhase < 0.7) mouthOpen = 1.5 * s;
-      if (isHurt) { mouthOpen = 2 * s; mouthY += 0.5 * s; }
+      if (isAttacking && attackPhase > 0.3 && attackPhase < 0.7) mouthOpen = 1.5;
+      if (isHurt) { mouthOpen = 2; mouthY += 0.5; }
 
-      ctx.fillStyle = '#e8536a';
-      ctx.beginPath();
       if (mouthOpen > 0) {
-        ctx.ellipse(cx, mouthY, 1.8 * s, mouthOpen, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#e8536a';
+        ctx.beginPath();
+        ctx.ellipse(cx, mouthY, 1.5, mouthOpen, 0, 0, Math.PI * 2);
         ctx.fill();
       } else {
         ctx.strokeStyle = '#e8536a';
-        ctx.lineWidth = 0.6 * s;
+        ctx.lineWidth = 0.6;
         ctx.beginPath();
-        ctx.arc(cx, mouthY, 1.5 * s, 0.2, Math.PI - 0.2);
+        ctx.arc(cx, mouthY, 1.3, 0.2, Math.PI - 0.2);
         ctx.stroke();
       }
 
       // Blush
-      ctx.fillStyle = 'rgba(255,150,160,0.25)';
+      ctx.fillStyle = 'rgba(255,150,160,0.2)';
       ctx.beginPath();
-      ctx.ellipse(cx - 5 * s, headY + 3.5 * s, 2 * s, 1.2 * s, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx - 4.5, headCenterY + 3, 1.8, 1, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.ellipse(cx + 5 * s, headY + 3.5 * s, 2 * s, 1.2 * s, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx + 4.5, headCenterY + 3, 1.8, 1, 0, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.globalAlpha = 1;
