@@ -377,7 +377,7 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         player.vy = 0;
         player.onGround = true;
         player.hp -= 15;
-        if (player.hp <= 0) player.hp = 1;
+        if (player.hp <= 0) player.hp = player.maxHp;
       }
 
       // ── Camera ──
@@ -587,7 +587,7 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
 
       // Check player death
       if (player.hp <= 0) {
-        player.hp = 1;
+        player.hp = player.maxHp;
         player.x = 100;
         player.y = GROUND_Y - PLAYER_H;
         player.vx = 0;
