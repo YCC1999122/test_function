@@ -158,46 +158,127 @@ class GameAudio {
   startBGM() {
     if (this.isBgmPlaying) return;
     this.isBgmPlaying = true;
-    
+
     const ctx = this.getContext();
-    const bgmNotes = [
-      { freq: 261.63, duration: 0.5 },
-      { freq: 293.66, duration: 0.5 },
-      { freq: 329.63, duration: 0.5 },
-      { freq: 349.23, duration: 0.5 },
-      { freq: 392.00, duration: 0.5 },
-      { freq: 349.23, duration: 0.5 },
-      { freq: 329.63, duration: 0.5 },
-      { freq: 293.66, duration: 0.5 },
-      { freq: 261.63, duration: 1 },
+
+    // Rich melody with varied note lengths
+    const melody = [
+      { f: 262, d: 0.22 }, { f: 330, d: 0.22 }, { f: 392, d: 0.22 }, { f: 330, d: 0.15 },
+      { f: 392, d: 0.22 }, { f: 523, d: 0.15 }, { f: 392, d: 0.15 }, { f: 330, d: 0.22 },
+      { f: 294, d: 0.22 }, { f: 349, d: 0.22 }, { f: 440, d: 0.22 }, { f: 349, d: 0.15 },
+      { f: 440, d: 0.22 }, { f: 523, d: 0.15 }, { f: 440, d: 0.15 }, { f: 349, d: 0.22 },
+      { f: 330, d: 0.22 }, { f: 392, d: 0.22 }, { f: 494, d: 0.22 }, { f: 392, d: 0.15 },
+      { f: 494, d: 0.22 }, { f: 587, d: 0.15 }, { f: 494, d: 0.15 }, { f: 392, d: 0.15 },
+      { f: 523, d: 0.3 }, { f: 494, d: 0.15 }, { f: 440, d: 0.15 }, { f: 392, d: 0.3 },
+      { f: 349, d: 0.3 }, { f: 330, d: 0.15 }, { f: 294, d: 0.15 }, { f: 262, d: 0.5 },
     ];
-    
-    let noteIndex = 0;
-    
-    const playBgmNote = () => {
+
+    // Bass line
+    const bass = [
+      { f: 131, d: 0.45 }, { f: 131, d: 0.45 },
+      { f: 147, d: 0.45 }, { f: 147, d: 0.45 },
+      { f: 165, d: 0.45 }, { f: 165, d: 0.45 },
+      { f: 147, d: 0.45 }, { f: 147, d: 0.45 },
+    ];
+
+    let noteIdx = 0;
+    let bassIdx = 0;
+
+    const playRichBgm = () => {
       if (!this.isBgmPlaying) return;
-      
-      const note = bgmNotes[noteIndex];
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
-      osc.type = 'triangle';
-      osc.frequency.value = note.freq;
-      
-      gain.gain.setValueAtTime(0.05, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + note.duration);
-      
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + note.duration);
-      
-      noteIndex = (noteIndex + 1) % bgmNotes.length;
-      this.bgmInterval = window.setTimeout(playBgmNote, note.duration * 1000);
+
+      const now = ctx.currentTime;
+
+      // === Melody (square wave, brighter) ===
+      const note = melody[noteIdx];
+      const mOsc = ctx.createOscillator();
+      const mGain = ctx.createGain();
+      mOsc.connect(mGain);
+      mGain.connect(ctx.destination);
+      mOsc.type = 'square';
+      mOsc.frequency.value = note.f;
+      mGain.gain.setValueAtTime(0.04, now);
+      mGain.gain.exponentialRampToValueAtTime(0.001, now + note.d * 0.95);
+      mOsc.start(now);
+      mOsc.stop(now + note.d + 0.02);
+
+      // === Harmony (triangle, softer) ===
+      const hFreq = note.f * (noteIdx % 4 === 0 ? 1.5 : noteIdx % 4 === 2 ? 1.333 : 1.25);
+      const hOsc = ctx.createOscillator();
+      const hGain = ctx.createGain();
+      hOsc.connect(hGain);
+      hGain.connect(ctx.destination);
+      hOsc.type = 'triangle';
+      hOsc.frequency.value = hFreq;
+      hGain.gain.setValueAtTime(0.025, now);
+      hGain.gain.exponentialRampToValueAtTime(0.001, now + note.d * 0.8);
+      hOsc.start(now);
+      hOsc.stop(now + note.d + 0.02);
+
+      // === Pad (sine, very soft background) ===
+      const pOsc = ctx.createOscillator();
+      const pGain = ctx.createGain();
+      pOsc.connect(pGain);
+      pGain.connect(ctx.destination);
+      pOsc.type = 'sine';
+      pOsc.frequency.value = note.f * 0.5;
+      pGain.gain.setValueAtTime(0.015, now);
+      pGain.gain.exponentialRampToValueAtTime(0.001, now + note.d * 0.7);
+      pOsc.start(now);
+      pOsc.stop(now + note.d + 0.02);
+
+      noteIdx = (noteIdx + 1) % melody.length;
+
+      // === Bass (every 2 melody notes) ===
+      if (noteIdx % 2 === 0) {
+        const bNote = bass[bassIdx];
+        bassIdx = (bassIdx + 1) % bass.length;
+        const bOsc = ctx.createOscillator();
+        const bGain = ctx.createGain();
+        bOsc.connect(bGain);
+        bGain.connect(ctx.destination);
+        bOsc.type = 'sawtooth';
+        bOsc.frequency.value = bNote.f;
+        bGain.gain.setValueAtTime(0.06, now);
+        bGain.gain.exponentialRampToValueAtTime(0.001, now + bNote.d);
+        bOsc.start(now);
+        bOsc.stop(now + bNote.d + 0.02);
+      }
+
+      // === Drum hit every 4 notes ===
+      if (noteIdx % 4 === 0) {
+        const dOsc = ctx.createOscillator();
+        const dGain = ctx.createGain();
+        dOsc.connect(dGain);
+        dGain.connect(ctx.destination);
+        dOsc.type = 'sine';
+        dOsc.frequency.setValueAtTime(150, now);
+        dOsc.frequency.exponentialRampToValueAtTime(30, now + 0.1);
+        dGain.gain.setValueAtTime(0.08, now);
+        dGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        dOsc.start(now);
+        dOsc.stop(now + 0.15);
+      }
+
+      // Snare-like hit every 8 notes
+      if (noteIdx % 8 === 4) {
+        const sOsc = ctx.createOscillator();
+        const sGain = ctx.createGain();
+        sOsc.connect(sGain);
+        sGain.connect(ctx.destination);
+        sOsc.type = 'triangle';
+        sOsc.frequency.setValueAtTime(200, now);
+        sOsc.frequency.exponentialRampToValueAtTime(80, now + 0.06);
+        sGain.gain.setValueAtTime(0.05, now);
+        sGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        sOsc.start(now);
+        sOsc.stop(now + 0.1);
+      }
+
+      this.bgmInterval = window.setTimeout(playRichBgm, note.d * 1000);
     };
-    
-    playBgmNote();
+
+    playRichBgm();
   }
 
   stopBGM() {

@@ -628,9 +628,15 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         switch (enemy.type) {
           case 'grunt': {
             const speed = 1.8;
+            const minDist = 45;
             if (dist < 320) {
               enemy.aiState = 'chase';
-              if (Math.abs(dx) > 15) enemy.vx += (dx > 0 ? 1 : -1) * speed * 0.3;
+              if (Math.abs(dx) > minDist) {
+                enemy.vx += (dx > 0 ? 1 : -1) * speed * 0.3;
+              } else {
+                // Too close, back off slightly
+                enemy.vx -= (dx > 0 ? 1 : -1) * speed * 0.15;
+              }
             } else {
               enemy.aiState = 'idle';
               if (enemy.aiTimer > 120) {
@@ -638,7 +644,7 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
                 enemy.aiTimer = 0;
               }
             }
-            if (dist < 50 && enemy.onGround && enemy.aiTimer % 50 === 0) {
+            if (dist < 60 && enemy.onGround && enemy.aiTimer % 50 === 0) {
               enemy.vx = (dx > 0 ? 1 : -1) * 4;
               enemy.vy = -5;
               enemy.onGround = false;
@@ -647,9 +653,14 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
           }
           case 'runner': {
             const speed = 3.2;
+            const minDist = 55;
             if (dist < 420) {
               enemy.aiState = 'chase';
-              enemy.vx += (dx > 0 ? 1 : -1) * speed * 0.22;
+              if (Math.abs(dx) > minDist) {
+                enemy.vx += (dx > 0 ? 1 : -1) * speed * 0.22;
+              } else {
+                enemy.vx -= (dx > 0 ? 1 : -1) * speed * 0.12;
+              }
             } else {
               enemy.aiState = 'idle';
               if (enemy.aiTimer > 80) {
@@ -657,7 +668,7 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
                 enemy.aiTimer = 0;
               }
             }
-            if (dist < 42 && enemy.onGround) {
+            if (dist < 55 && enemy.onGround) {
               enemy.vx = (dx > 0 ? 1 : -1) * 5;
               enemy.vy = -6;
               enemy.onGround = false;
@@ -674,9 +685,14 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
           }
           case 'tank': {
             const speed = 1.3;
+            const minDist = 55;
             if (dist < 380) {
               enemy.aiState = 'chase';
-              if (Math.abs(dx) > 20) enemy.vx += (dx > 0 ? 1 : -1) * speed * 0.18;
+              if (Math.abs(dx) > minDist) {
+                enemy.vx += (dx > 0 ? 1 : -1) * speed * 0.18;
+              } else {
+                enemy.vx -= (dx > 0 ? 1 : -1) * speed * 0.1;
+              }
               if (dist < 220 && enemy.aiTimer > 90) {
                 enemy.vx = (dx > 0 ? 1 : -1) * 9;
                 enemy.aiTimer = 0;
@@ -692,8 +708,13 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
           }
           case 'boss': {
             const speed = 2.2;
+            const minDist = 60;
             enemy.aiState = 'chase';
-            if (Math.abs(dx) > 20) enemy.vx += (dx > 0 ? 1 : -1) * speed * 0.18;
+            if (Math.abs(dx) > minDist) {
+              enemy.vx += (dx > 0 ? 1 : -1) * speed * 0.18;
+            } else {
+              enemy.vx -= (dx > 0 ? 1 : -1) * speed * 0.1;
+            }
             // Jump slam
             if (dist < 280 && enemy.onGround && enemy.aiTimer > 65) {
               enemy.vy = -13;
@@ -1461,8 +1482,8 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       const runCycle = frame * 0.25;
       const cycleSpeed = isRunning ? runCycle : walkCycle;
       const moving = isWalking || isRunning;
-      const legSwing = moving ? Math.sin(cycleSpeed) * 0.7 : 0;
-      const armSwing = moving ? Math.sin(cycleSpeed + Math.PI) * 0.55 : 0;
+      const legSwing = moving ? Math.sin(cycleSpeed) * 0.9 : 0;
+      const armSwing = moving ? Math.sin(cycleSpeed + Math.PI) * 0.85 : 0;
       // Body bounce: subtle, feet stay grounded
       const bounceY = moving ? Math.abs(Math.sin(cycleSpeed)) * 1.5 : 0;
       const jumpLegAngle = isJumpUp ? 0.5 : isJumpDown ? -0.3 : 0;
@@ -1499,11 +1520,12 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       const rHipX = cx + 7;
       const thighLen = 11;
       const shinLen = 9;
+      const legThick = 4.2;          // unified leg thickness
       const hipBaseY = hipY - byBase;
 
       if (isJumpUp) {
-        drawLimb(lHipX, hipBaseY, 7, -0.5 + jumpLegAngle, 4, skinColor);
-        drawLimb(rHipX, hipBaseY, 7, -0.5 - jumpLegAngle, 4, skinColor);
+        drawLimb(lHipX, hipBaseY, 7, -0.5 + jumpLegAngle, legThick, skinColor);
+        drawLimb(rHipX, hipBaseY, 7, -0.5 - jumpLegAngle, legThick, skinColor);
         ctx.fillStyle = shoeColor;
         ctx.beginPath();
         ctx.ellipse(lHipX + 3, hipBaseY + 6, 4, 3, 0.3, 0, Math.PI * 2);
@@ -1514,15 +1536,15 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       } else {
         // Left leg
         const lThighA = -0.15 + legSwing;
-        const lKnee = drawLimb(lHipX, hipBaseY, thighLen, lThighA, 4.5, skinColor);
+        const lKnee = drawLimb(lHipX, hipBaseY, thighLen, lThighA, legThick, skinColor);
         const lShinA = lThighA + 0.2 + (legSwing > 0 ? 0.35 : -0.2);
-        const lFoot = drawLimb(lKnee.x, lKnee.y, shinLen, lShinA, 3.5, skinColor);
+        const lFoot = drawLimb(lKnee.x, lKnee.y, shinLen, lShinA, legThick, skinColor);
 
         // Right leg
         const rThighA = -0.15 - legSwing;
-        const rKnee = drawLimb(rHipX, hipBaseY, thighLen, rThighA, 4.5, skinColor);
+        const rKnee = drawLimb(rHipX, hipBaseY, thighLen, rThighA, legThick, skinColor);
         const rShinA = rThighA + 0.2 + (legSwing < 0 ? 0.35 : -0.2);
-        const rFoot = drawLimb(rKnee.x, rKnee.y, shinLen, rShinA, 3.5, skinColor);
+        const rFoot = drawLimb(rKnee.x, rKnee.y, shinLen, rShinA, legThick, skinColor);
 
         // Shoes
         const drawShoe = (fx: number, fy: number, ang: number) => {
@@ -1580,15 +1602,16 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       const rShoulderX = cx + 9;
       const upperLen = 9;
       const foreLen = 8;
+      const armThick = 3.5;          // unified arm thickness
 
       if (isAttacking) {
         const atkAngle = attackPhase < 0.5 ? -0.7 + attackPhase * 2.5 : -0.7 + (1 - attackPhase) * 2.5;
         // Left arm (back)
-        const lElbow = drawLimb(lShoulderX, shoulderY - byBase, upperLen, -0.3, 3.5, skinColor);
-        drawLimb(lElbow.x, lElbow.y, foreLen, -0.1, 3, skinColor);
+        const lElbow = drawLimb(lShoulderX, shoulderY - byBase, upperLen, -0.3, armThick, skinColor);
+        drawLimb(lElbow.x, lElbow.y, foreLen, -0.1, armThick, skinColor);
         // Right arm (attacking forward)
-        const rUpper = drawLimb(rShoulderX, shoulderY - byBase, upperLen, atkAngle * facing, 3.5, skinColor);
-        const rHand = drawLimb(rUpper.x, rUpper.y, foreLen, atkAngle * facing + 0.1, 3, skinColor);
+        const rUpper = drawLimb(rShoulderX, shoulderY - byBase, upperLen, atkAngle * facing, armThick, skinColor);
+        const rHand = drawLimb(rUpper.x, rUpper.y, foreLen, atkAngle * facing + 0.1, armThick, skinColor);
         if (player.weapon && player.attackTimer > 2) {
           ctx.save();
           ctx.translate(rHand.x, rHand.y);
@@ -1597,19 +1620,19 @@ const BeatEmUpGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
           ctx.restore();
         }
       } else if (isHurt) {
-        drawLimb(lShoulderX, shoulderY - byBase, upperLen, -1.0, 3.5, skinColor);
-        drawLimb(rShoulderX, shoulderY - byBase, upperLen, -1.0, 3.5, skinColor);
+        drawLimb(lShoulderX, shoulderY - byBase, upperLen, -1.0, armThick, skinColor);
+        drawLimb(rShoulderX, shoulderY - byBase, upperLen, -1.0, armThick, skinColor);
       } else if (isPickup) {
         const celA = -1.4 + Math.sin(player.pickupCelebrate * 0.5) * 0.3;
-        drawLimb(lShoulderX, shoulderY - byBase, upperLen, celA, 3.5, skinColor);
-        drawLimb(rShoulderX, shoulderY - byBase, upperLen, celA, 3.5, skinColor);
+        drawLimb(lShoulderX, shoulderY - byBase, upperLen, celA, armThick, skinColor);
+        drawLimb(rShoulderX, shoulderY - byBase, upperLen, celA, armThick, skinColor);
       } else {
         // Walking arm swing - left arm forward when right leg forward
-        const lElbow = drawLimb(lShoulderX, shoulderY - byBase, upperLen, -0.2 + armSwing, 3.5, skinColor);
-        drawLimb(lElbow.x, lElbow.y, foreLen, -0.15 + armSwing * 0.5, 3, skinColor);
+        const lElbow = drawLimb(lShoulderX, shoulderY - byBase, upperLen, -0.2 + armSwing, armThick, skinColor);
+        drawLimb(lElbow.x, lElbow.y, foreLen, -0.15 + armSwing * 0.5, armThick, skinColor);
 
-        const rElbow = drawLimb(rShoulderX, shoulderY - byBase, upperLen, -0.2 - armSwing, 3.5, skinColor);
-        const rHand = drawLimb(rElbow.x, rElbow.y, foreLen, -0.15 - armSwing * 0.5, 3, skinColor);
+        const rElbow = drawLimb(rShoulderX, shoulderY - byBase, upperLen, -0.2 - armSwing, armThick, skinColor);
+        const rHand = drawLimb(rElbow.x, rElbow.y, foreLen, -0.15 - armSwing * 0.5, armThick, skinColor);
 
         if (player.weapon) {
           ctx.save();
