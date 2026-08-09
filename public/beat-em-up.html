@@ -16,7 +16,7 @@ body{background:#0a0a0a;display:flex;justify-content:center;align-items:center;h
 <body>
 <canvas id="game" width="800" height="500"></canvas>
 <div id="scanlines"></div>
-<div id="hint">方向键移动 · J攻击 · K跳跃 · U冲刺 · I必杀技(25%HP) · 近身J+K抓投</div>
+<div id="hint">← → 移动 · 空格跳跃 · Shift冲刺 · 鼠标左键攻击 · 右键大招 · 近身J+K抓投</div>
 <script>
 // ═══════════════════════════════════════════
 // 街头美少女 - 横版街机格斗
@@ -53,11 +53,23 @@ let cutsceneData=null,cutsceneTextIdx=0,cutsceneCharIdx=0,cutsceneTimer=0;
 let reviveTimer=0,reviveAlpha=0;
 let bossDefeated=false;
 let titleBlink=0;
+let victoryTimer=0;
 
 // ── Input ──
 const keys={};
 window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;keys[e.key]=true;e.preventDefault()});
 window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;keys[e.key]=false;e.preventDefault()});
+// Mouse controls
+canvas.addEventListener('mousedown',e=>{
+  e.preventDefault();
+  if(e.button===0)keys['j']=true;  // left click = attack
+  if(e.button===2)keys['i']=true;  // right click = special
+});
+canvas.addEventListener('mouseup',e=>{
+  if(e.button===0)keys['j']=false;
+  if(e.button===2)keys['i']=false;
+});
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
 
 // ── Camera ──
 let camX=0;
@@ -516,6 +528,7 @@ function initGame(){
   spawnBreakables();
   cutscene1Done=false;cutscene2Done=false;cutscene3Done=false;
   bossDefeated=false;
+  victoryTimer=0;
   camX=0;comboCount=0;comboTimer=0;
   gameState=STATE.PLAYING;
 }
@@ -532,7 +545,12 @@ function update(){
     return;
   }
   if(gameState===STATE.VICTORY){
-    if(keys['enter']||keys[' ']){initGame();}
+    // Auto-advance to next level after 2 seconds
+    if(!victoryTimer)victoryTimer=0;
+    victoryTimer++;
+    if(victoryTimer>120){
+      try{window.parent.postMessage({type:'beatEmUpComplete'},'*');}catch(e){}
+    }
     return;
   }
   if(gameState===STATE.CUTSCENE){
@@ -548,10 +566,12 @@ function update(){
         cutsceneTextIdx++;
         cutsceneCharIdx=0;
         if(cutsceneTextIdx>=cutsceneData.lines.length){
+          const wasBossIntro = cutsceneData.name==='恶霸头目';
           gameState=STATE.PLAYING;
           cutsceneData=null;
-          if(cutsceneTextIdx===3&&cutsceneData&&cutsceneData.name==='恶霸头目'){
-            spawnBoss();
+          if(wasBossIntro) spawnBoss();
+          if(cutsceneTextIdx===3&&wasBossIntro){
+            // already handled above
           }
         }
       }
@@ -1008,8 +1028,8 @@ function render(){
     ctx.fillStyle = '#fbbf24';ctx.font='bold 16px monospace';
     ctx.fillText('STREET BEAUTY - 横版格斗',W/2,195);
     ctx.fillStyle = '#fff';ctx.font='14px monospace';
-    ctx.fillText('方向键移动 · J攻击 · K跳跃',W/2,250);
-    ctx.fillText('U冲刺 · I必杀技(25%HP)',W/2,275);
+    ctx.fillText('← → 移动 · 空格跳跃 · Shift冲刺',W/2,250);
+    ctx.fillText('鼠标左键攻击 · 右键大招(25%HP)',W/2,275);
     ctx.fillText('近身J+K抓投',W/2,300);
     if(Math.sin(titleBlink)>0){
       ctx.fillStyle = '#ff0';ctx.font='bold 20px monospace';
