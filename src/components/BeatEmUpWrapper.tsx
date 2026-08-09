@@ -30,7 +30,7 @@ const BeatEmUpWrapper = ({ onCompleteGame }: BeatEmUpWrapperProps) => {
           maxHeight: '100vh',
           aspectRatio: '800 / 500',
         }}
-        title="街头美少女 - 格斗闯关"
+        title="热血格斗 - 第一关"
         allow="autoplay"
       />
     </div>
