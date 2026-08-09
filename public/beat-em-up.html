@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
@@ -876,8 +876,10 @@ function update(){
   }
 
   // ── Victory check ──
-  if(bossDefeated&&!enemies.some(e=>e.alive&&e.type==='boss')){
+  if(bossDefeated&&!enemies.some(e=>e.alive&&e.type==='boss')&&gameState!==STATE.VICTORY){
     gameState=STATE.VICTORY;
+    // Notify parent window (React app) of completion
+    try{window.parent.postMessage({type:'beatEmUpComplete'},'*');}catch(e){}
   }
 }
 
@@ -1025,7 +1027,7 @@ function render(){
     ctx.fillText('🏆 关卡完成!',W/2,200);
     ctx.fillStyle = '#fff';ctx.font='16px monospace';
     ctx.fillText('你击败了恶霸头目!',W/2,250);
-    ctx.fillText('按 ENTER 重新挑战',W/2,300);
+    ctx.fillText('正在前往下一关...',W/2,300);
     ctx.textAlign='start';
   }
 }

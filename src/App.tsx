@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import BeatEmUpGame from './components/BeatEmUpGame';
+import BeatEmUpWrapper from './components/BeatEmUpWrapper';
 import PlatformGame from './components/PlatformGame';
 import MazeGame from './components/MazeGame';
 import FPSGame from './components/FPSGame';
@@ -41,7 +41,7 @@ export default function App() {
   };
 
   if (currentView === 'game1') {
-    return <BeatEmUpGame onCompleteGame={handleEnterLevel2} />;
+    return <BeatEmUpWrapper onCompleteGame={handleEnterLevel2} />;
   }
 
   if (currentView === 'game2') {
