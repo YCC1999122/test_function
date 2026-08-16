@@ -7,14 +7,16 @@ const H = 500;
 const PADDLE_R = 30;
 const PUCK_R = 13;
 const WIN_SCORE = 3;
-const FRICTION = 0.992;
-const MAX_SPEED = 13;
+const FRICTION = 0.996;
+const MAX_SPEED = 18;
 const GOAL_W = 140;
-const AI_SPEED = 5.2;
+const AI_SPEED = 6.2;
 
 interface Paddle {
   x: number;
   y: number;
+  px: number;
+  py: number;
 }
 
 interface Puck {
@@ -41,8 +43,8 @@ const HockeyGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
   const [score, setScore] = useState({ player: 0, ai: 0 });
   const [scale, setScale] = useState(1);
 
-  const playerRef = useRef<Paddle>({ x: W / 2, y: H - 80 });
-  const aiRef = useRef<Paddle>({ x: W / 2, y: 80 });
+  const playerRef = useRef<Paddle>({ x: W / 2, y: H - 80, px: W / 2, py: H - 80 });
+  const aiRef = useRef<Paddle>({ x: W / 2, y: 80, px: W / 2, py: 80 });
   const puckRef = useRef<Puck>({ x: W / 2, y: H / 2, vx: 0, vy: 0 });
   const scoreRef = useRef({ player: 0, ai: 0 });
   const particlesRef = useRef<Particle[]>([]);
@@ -72,14 +74,14 @@ const HockeyGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
     puck.x = W / 2;
     puck.y = H / 2;
     const angle = Math.random() * Math.PI * 2;
-    const speed = 5;
+    const speed = 7;
     puck.vx = Math.cos(angle) * speed;
     puck.vy = Math.sin(angle) * speed;
   }, []);
 
   const initGame = useCallback(() => {
-    playerRef.current = { x: W / 2, y: H - 80 };
-    aiRef.current = { x: W / 2, y: 80 };
+    playerRef.current = { x: W / 2, y: H - 80, px: W / 2, py: H - 80 };
+    aiRef.current = { x: W / 2, y: 80, px: W / 2, py: 80 };
     mouseRef.current = { x: W / 2, y: H - 80 };
     scoreRef.current = { player: 0, ai: 0 };
     setScore({ player: 0, ai: 0 });
@@ -129,13 +131,15 @@ const HockeyGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       if (keys.has('arrowup') || keys.has('w')) ky = -1;
       if (keys.has('arrowdown') || keys.has('s')) ky = 1;
 
+      player.px = player.x;
+      player.py = player.y;
       if (kx !== 0 || ky !== 0) {
-        player.x += kx * 7;
-        player.y += ky * 7;
+        player.x += kx * 9;
+        player.y += ky * 9;
       } else {
         // Follow mouse
-        player.x += (mouseRef.current.x - player.x) * 0.4;
-        player.y += (mouseRef.current.y - player.y) * 0.4;
+        player.x += (mouseRef.current.x - player.x) * 0.5;
+        player.y += (mouseRef.current.y - player.y) * 0.5;
       }
 
       // Clamp player to bottom half
@@ -143,6 +147,8 @@ const HockeyGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       player.y = Math.max(H / 2 + PADDLE_R, Math.min(H - PADDLE_R, player.y));
 
       // ── AI control ──
+      ai.px = ai.x;
+      ai.py = ai.y;
       const targetX = puck.x;
       const targetY = puck.y;
       const dx = targetX - ai.x;
@@ -151,7 +157,7 @@ const HockeyGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
       if (dist > 1) {
         const step = Math.min(AI_SPEED, dist);
         ai.x += (dx / dist) * step;
-        ai.y += (dy / dist) * step * 0.6;
+        ai.y += (dy / dist) * step * 0.7;
       }
       ai.x = Math.max(PADDLE_R, Math.min(W - PADDLE_R, ai.x));
       ai.y = Math.max(PADDLE_R, Math.min(H / 2 - PADDLE_R, ai.y));
@@ -203,19 +209,39 @@ const HockeyGame = ({ onCompleteGame }: { onCompleteGame: () => void }) => {
         const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
         const minDist = PADDLE_R + PUCK_R;
         if (pdist < minDist && pdist > 0) {
-          // Normalize
           const nx = pdx / pdist;
           const ny = pdy / pdist;
           // Push puck out
           puck.x = paddle.x + nx * minDist;
           puck.y = paddle.y + ny * minDist;
-          // Reflect velocity
+          // 弹性反射
           const dot = puck.vx * nx + puck.vy * ny;
-          let speed = Math.min(Math.sqrt(puck.vx * puck.vx + puck.vy * puck.vy) + 2, MAX_SPEED);
-          speed = Math.max(speed, 7);
-          puck.vx = (puck.vx - 2 * dot * nx) * 0.5 + nx * speed * 0.5;
-          puck.vy = (puck.vy - 2 * dot * ny) * 0.5 + ny * speed * 0.5;
-          spawnParticles(puck.x, puck.y, '#ffffff', 8);
+          let rvx = puck.vx - 2 * dot * nx;
+          let rvy = puck.vy - 2 * dot * ny;
+          // 球杆速度叠加（挥杆越猛，球越快）
+          const pvx = paddle.x - paddle.px;
+          const pvy = paddle.y - paddle.py;
+          rvx += pvx * 0.8;
+          rvy += pvy * 0.8;
+          // 撞击加力
+          const curSpeed = Math.sqrt(rvx * rvx + rvy * rvy);
+          const newSpeed = Math.min(curSpeed + 3.5, MAX_SPEED);
+          if (curSpeed > 0.01) {
+            rvx = (rvx / curSpeed) * newSpeed;
+            rvy = (rvy / curSpeed) * newSpeed;
+          } else {
+            rvx = nx * 10;
+            rvy = ny * 10;
+          }
+          // 保证最低速度（有弹性、不软绵绵）
+          const s = Math.sqrt(rvx * rvx + rvy * rvy);
+          if (s < 11) {
+            rvx = (rvx / s) * 11;
+            rvy = (rvy / s) * 11;
+          }
+          puck.vx = rvx;
+          puck.vy = rvy;
+          spawnParticles(puck.x, puck.y, '#ffffff', 12);
           hit();
         }
       };
