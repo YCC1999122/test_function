@@ -16,7 +16,7 @@ body{background:#0a0a0a;display:flex;justify-content:center;align-items:center;h
 <body>
 <canvas id="game" width="800" height="500"></canvas>
 <div id="scanlines"></div>
-<div id="hint">← → 移动 · 空格跳跃 · Shift冲刺 · 鼠标左键攻击 · 右键大招 · 近身J+K抓投</div>
+<div id="hint">← → 移动 · 空格/↑ 二段跳 · Shift冲刺 · 左键攻击 · 右键大招 · 近身J+K抓投</div>
 <script>
 // ═══════════════════════════════════════════
 // 街头美少女 - 横版街机格斗
@@ -62,6 +62,12 @@ window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;keys[e.key]=
 // Mouse controls
 canvas.addEventListener('mousedown',e=>{
   e.preventDefault();
+  // Click to start from title
+  if(gameState===STATE.TITLE){
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    initGame();
+    return;
+  }
   if(e.button===0)keys['j']=true;  // left click = attack
   if(e.button===2)keys['i']=true;  // right click = special
 });
@@ -89,6 +95,7 @@ const player={
   dashTimer:0,specialTimer:0,
   grabTarget:null,grabTimer:0,
   deathTimer:0,
+  jumps:0,
 };
 function resetPlayer(){
   player.x=100;player.y=380;player.vx=0;player.vy=0;
@@ -99,6 +106,7 @@ function resetPlayer(){
   player.dashTimer=0;player.specialTimer=0;
   player.grabTarget=null;player.grabTimer=0;
   player.deathTimer=0;
+  player.jumps=0;
 }
 
 // ── Enemies ──
@@ -157,6 +165,23 @@ function spawnBreakables(){
   breakables.push({x:450,y:400,w:36,h:40,hp:15,alive:true,type:'crate'});
   breakables.push({x:1100,y:395,w:32,h:45,hp:20,alive:true,type:'barrel'});
   breakables.push({x:1700,y:400,w:36,h:40,hp:15,alive:true,type:'crate'});
+}
+
+// ── Platforms (vertical level design) ──
+const platforms=[];
+function spawnPlatforms(){
+  platforms.length=0;
+  // Rooftop / upper walkways - sections of elevated ground
+  platforms.push({x:350,y:300,w:180,h:14});   // 平台1
+  platforms.push({x:650,y:260,w:160,h:14});   // 平台2 (更高)
+  platforms.push({x:900,y:310,w:200,h:14});   // 平台3
+  platforms.push({x:1200,y:240,w:180,h:14});  // 平台4 (高空)
+  platforms.push({x:1500,y:300,w:160,h:14});  // 平台5
+  platforms.push({x:1750,y:270,w:180,h:14});  // 平台6
+  platforms.push({x:2050,y:230,w:200,h:14});  // 平台7 (Boss前高空)
+  // 小台阶
+  platforms.push({x:260,y:340,w:120,h:14});   // 小平台
+  platforms.push({x:1900,y:330,w:120,h:14});
 }
 
 // ── Cutscene triggers ──
@@ -526,6 +551,12 @@ function initGame(){
   resetPlayer();
   spawnWave();
   spawnBreakables();
+  spawnPlatforms();
+  // 平台上的拾取物（奖励跳跃探索）
+  pickups.push({x:430,y:268,type:'health',collected:false,bob:0});
+  pickups.push({x:1260,y:208,type:'weapon',subtype:'pipe',collected:false,bob:0});
+  pickups.push({x:1720,y:238,type:'coin',collected:false,bob:0});
+  pickups.push({x:2110,y:198,type:'health',collected:false,bob:0});
   cutscene1Done=false;cutscene2Done=false;cutscene3Done=false;
   bossDefeated=false;
   victoryTimer=0;
@@ -610,11 +641,9 @@ function update(){
   const p=player;
 
   // Input
-  let mx=0,my=0;
+  let mx=0;
   if(keys['arrowleft']||keys['a'])mx=-1;
   if(keys['arrowright']||keys['d'])mx=1;
-  if(keys['arrowup']||keys['w'])my=-1;
-  if(keys['arrowdown']||keys['s'])my=1;
 
   // Movement
   const spd=keys['shift']||keys['u']?6:3;
@@ -622,19 +651,49 @@ function update(){
   else if(p.state==='walk')p.state='idle';
 
   p.x+=p.vx;p.vx*=0.8;
-  p.y+=my*2;
 
-  // Jump
-  if((keys['k']||keys[' '])&&p.onGround&&p.state!=='attack'){
-    p.vy=-12;p.onGround=false;p.state='jump';
+  // Jump (double jump) - space / up / W
+  if((keys['k']||keys[' ']||keys['w']||keys['arrowup'])&&p.state!=='attack'){
+    keys['k']=false;keys[' ']=false;keys['w']=false;keys['arrowup']=false;
+    if(p.onGround||p.jumps<2){
+      p.vy=-11;p.onGround=false;p.state='jump';
+      p.jumps++;
+      spawnDust(p.x,p.y+40);
+    }
   }
 
   // Gravity
   p.vy+=0.7;
   p.y+=p.vy;
-  if(p.y>=380){p.y=380;p.vy=0;p.onGround=true;}
+
+  // Ground collision
+  if(p.vy>=0&&p.y>=380){
+    if(p.jumps>0||p.vy>0)spawnDust(p.x,380);
+    p.y=380;p.vy=0;p.onGround=true;p.jumps=0;
+    if(p.state==='jump')p.state='idle';
+  }
+  // Platform collision (land on top when falling)
+  if(p.vy>=0){
+    for(const pl of platforms){
+      if(p.x+30>pl.x&&p.x<pl.x+pl.w&&p.y<=pl.y&&p.y+p.vy>=pl.y){
+        p.y=pl.y;p.vy=0;p.onGround=true;p.jumps=0;
+        if(p.state==='jump')p.state='idle';
+        spawnDust(p.x,pl.y);
+        break;
+      }
+    }
+  }
+  // Fall off platform edge if moved past
+  if(p.onGround&&p.y<380){
+    let onPlat=false;
+    for(const pl of platforms){
+      if(p.x+30>pl.x&&p.x<pl.x+pl.w&&Math.abs(p.y-pl.y)<2){onPlat=true;break;}
+    }
+    if(!onPlat){p.onGround=false;p.vy=0;}
+  }
+
   p.x=Math.max(30,Math.min(WORLD_W-30,p.x));
-  p.y=Math.max(100,Math.min(420,p.y));
+  p.y=Math.max(60,Math.min(440,p.y));
 
   // Attack
   if(keys['j']&&p.specialTimer<=0&&p.state!=='dead'){
@@ -939,6 +998,25 @@ function render(){
 
   drawBackground(camX);
 
+  // Platforms (vertical walkways)
+  for(const pl of platforms){
+    const px=pl.x-camX;
+    if(px<-pl.w||px>W+50)continue;
+    const py=pl.y+60;  // 平台表面 = 角色脚部位置
+    // 平台板
+    ctx.fillStyle='#4a3a5a';
+    ctx.fillRect(px,py-14,pl.w,14);
+    ctx.fillStyle='#5a4a6a';
+    ctx.fillRect(px,py-14,pl.w,4);
+    // 边缘高光
+    ctx.strokeStyle='#8a6aa0';ctx.lineWidth=1;
+    ctx.strokeRect(px,py-14,pl.w,14);
+    // 支撑柱（到地面 440）
+    ctx.fillStyle='#3a2a4a';
+    ctx.fillRect(px+8,py,6,440-py);
+    ctx.fillRect(px+pl.w-14,py,6,440-py);
+  }
+
   // Breakables
   for(const b of breakables){
     if(!b.alive)continue;
@@ -1028,12 +1106,12 @@ function render(){
     ctx.fillStyle = '#fbbf24';ctx.font='bold 16px monospace';
     ctx.fillText('STREET BEAUTY - 横版格斗',W/2,195);
     ctx.fillStyle = '#fff';ctx.font='14px monospace';
-    ctx.fillText('← → 移动 · 空格跳跃 · Shift冲刺',W/2,250);
+    ctx.fillText('← → 移动 · 空格/↑ 二段跳 · Shift冲刺',W/2,250);
     ctx.fillText('鼠标左键攻击 · 右键大招(25%HP)',W/2,275);
-    ctx.fillText('近身J+K抓投',W/2,300);
+    ctx.fillText('近身J+K抓投 · 跳上平台探索',W/2,300);
     if(Math.sin(titleBlink)>0){
       ctx.fillStyle = '#ff0';ctx.font='bold 20px monospace';
-      ctx.fillText('按 ENTER 开始游戏',W/2,360);
+      ctx.fillText('点击画面或按 ENTER 开始',W/2,360);
     }
     ctx.fillStyle = '#aaa';ctx.font='10px monospace';
     ctx.fillText('点击画面激活音频',W/2,420);
