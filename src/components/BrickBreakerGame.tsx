@@ -13,14 +13,19 @@ const BALL_SPEED = 6.5;
 const MAX_BALL_SPEED = 13;
 const LIVES = 3;
 
-// 砖块网格（约 200 块）
-const GRID_COLS = 16;
-const GRID_ROWS = 13;
-const BRICK_W = 42;
-const BRICK_H = 20;
-const BRICK_GAP = 4;
-const BRICK_TOP = 55;
+// 砖块网格（约 500 块）
+const GRID_COLS = 26;
+const GRID_ROWS = 20;
+const BRICK_W = 27;
+const BRICK_H = 13;
+const BRICK_GAP = 2;
+const BRICK_TOP = 30;
 const BRICK_LEFT = (W - (GRID_COLS * BRICK_W + (GRID_COLS - 1) * BRICK_GAP)) / 2;
+
+// 中央井道（入口 + 深度）
+const WELL_COL_L = 12;
+const WELL_COL_R = 13;
+const SHAFT_START = GRID_ROWS - 11; // 井道深度（竖井起始行）
 
 const FRAGILE_COLORS = ['#38bdf8', '#818cf8', '#a78bfa', '#f472b6', '#fb7185'];
 const HARD_COLOR = '#475569';
@@ -100,15 +105,21 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
     return () => window.removeEventListener('resize', updateScale);
   }, []);
 
-  // 要塞布局：外层坚硬砖块包裹内层易碎砖块，底部中央留一条小道
+  // 要塞布局：外层坚硬砖块(10血)包裹内层易碎砖块，中央井道深入
   const createBricks = useCallback((): Brick[] => {
     const bricks: Brick[] = [];
     for (let row = 0; row < GRID_ROWS; row++) {
       for (let col = 0; col < GRID_COLS; col++) {
-        const isShell = row === 0 || row === GRID_ROWS - 1 || col === 0 || col === GRID_COLS - 1;
-        const isEntrance = row === GRID_ROWS - 1 && (col === 7 || col === 8);
-        if (isEntrance) continue; // 底部入口缺口
-        const hard = isShell;
+        // 底部入口缺口
+        const isEntrance = row === GRID_ROWS - 1 && col >= WELL_COL_L && col <= WELL_COL_R;
+        // 竖井通道（有深度）
+        const isShaft = col >= WELL_COL_L && col <= WELL_COL_R && row >= SHAFT_START && row <= GRID_ROWS - 2;
+        if (isEntrance || isShaft) continue; // 空
+        // 外层边框
+        const isBorder = row === 0 || row === GRID_ROWS - 1 || col === 0 || col === GRID_COLS - 1;
+        // 井壁（竖井两侧硬砖）
+        const isWellWall = (col === WELL_COL_L - 1 || col === WELL_COL_R + 1) && row >= SHAFT_START && row <= GRID_ROWS - 1;
+        const hard = isBorder || isWellWall;
         bricks.push({
           x: BRICK_LEFT + col * (BRICK_W + BRICK_GAP),
           y: BRICK_TOP + row * (BRICK_H + BRICK_GAP),
@@ -116,8 +127,8 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
           h: BRICK_H,
           alive: true,
           color: hard ? HARD_COLOR : FRAGILE_COLORS[row % FRAGILE_COLORS.length],
-          hp: hard ? 3 : 1,
-          maxHp: hard ? 3 : 1,
+          hp: hard ? 10 : 1,
+          maxHp: hard ? 10 : 1,
           hard,
         });
       }
@@ -153,19 +164,29 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
       paddle.w = Math.min(PADDLE_MAX_W, paddle.w + 60);
       widenTimerRef.current = 600; // 10 秒后恢复
     } else if (type === 'multiball') {
-      ballsRef.current.push({
-        x: paddle.x + paddle.w / 2,
-        y: paddle.y - BALL_R - 5,
-        vx: (Math.random() - 0.5) * 5,
-        vy: -BALL_SPEED,
-      });
-    } else if (type === 'double') {
-      const cur = ballsRef.current;
-      const clones: Ball[] = [];
+      // 每个球在其当前位置立刻分身
+      const cur = ballsRef.current.slice();
       for (const b of cur) {
-        clones.push({ x: b.x, y: b.y, vx: -b.vx, vy: b.vy });
+        ballsRef.current.push({
+          x: b.x, y: b.y,
+          vx: -b.vx + (Math.random() - 0.5) * 1.5,
+          vy: b.vy,
+        });
       }
-      for (const c of clones) ballsRef.current.push(c);
+    } else if (type === 'double') {
+      // 每个球在其实时位置 +2
+      const cur = ballsRef.current.slice();
+      for (const b of cur) {
+        for (let i = 0; i < 2; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const sp = Math.max(4, Math.sqrt(b.vx * b.vx + b.vy * b.vy));
+          ballsRef.current.push({
+            x: b.x, y: b.y,
+            vx: Math.cos(a) * sp,
+            vy: Math.sin(a) * sp,
+          });
+        }
+      }
     }
   }, []);
 
@@ -308,7 +329,7 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
                 setScore(scoreRef.current);
                 spawnParticles(brick.x + brick.w / 2, brick.y + brick.h / 2, brick.color, 10);
                 // 掉落 buff
-                const dropChance = brick.hard ? 0.28 : 0.1;
+                const dropChance = brick.hard ? 0.4 : 0.14;
                 if (Math.random() < dropChance) {
                   spawnPowerUp(brick.x + brick.w / 2, brick.y + brick.h / 2);
                 }
@@ -575,8 +596,8 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-2xl">
             <div className="text-5xl mb-4">🧱</div>
             <h2 className="text-3xl font-bold text-white mb-2">弹珠打砖块</h2>
-            <p className="text-slate-300 mb-1 text-sm">约 200 块砖，外层坚硬包裹内层易碎</p>
-            <p className="text-slate-400 mb-4 text-sm">击碎砖块掉落 Buff：球分身 / 球翻倍 / 挡板变长</p>
+            <p className="text-slate-300 mb-1 text-sm">约 500 块砖，外层坚硬(10血)包裹内层易碎</p>
+            <p className="text-slate-400 mb-4 text-sm">中央井道深入要塞，击碎砖块掉落 Buff：球分身 / 球翻倍 / 挡板变长</p>
             <button
               onClick={() => {
                 select();
