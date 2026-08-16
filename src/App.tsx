@@ -3,6 +3,7 @@ import HockeyGame from './components/HockeyGame';
 import PlatformGame from './components/PlatformGame';
 import MazeGame from './components/MazeGame';
 import FPSGame from './components/FPSGame';
+import BrickBreakerGame from './components/BrickBreakerGame';
 import ParticleBackground from './components/ParticleBackground';
 import HeroSection from './components/HeroSection';
 import Countdown from './components/Countdown';
@@ -11,7 +12,7 @@ import WishMessage from './components/WishMessage';
 import MusicPlayer from './components/MusicPlayer';
 import ShareButton from './components/ShareButton';
 
-type View = 'game1' | 'game2' | 'game3' | 'game4' | 'birthday';
+type View = 'game1' | 'game2' | 'game3' | 'game4' | 'game5' | 'birthday';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('game1');
@@ -31,7 +32,12 @@ export default function App() {
     setCurrentView('game4');
   };
 
-  // game4: 平台跳跃 → 生日祝福
+  // game4: 平台跳跃 → game5: 弹珠打砖块
+  const handleEnterLevel5 = () => {
+    setCurrentView('game5');
+  };
+
+  // game5: 弹珠打砖块 → 生日祝福
   const handleEnterBirthday = () => {
     setCurrentView('birthday');
   };
@@ -53,7 +59,11 @@ export default function App() {
   }
 
   if (currentView === 'game4') {
-    return <PlatformGame onCompleteLevel1={handleEnterBirthday} />;
+    return <PlatformGame onCompleteLevel1={handleEnterLevel5} />;
+  }
+
+  if (currentView === 'game5') {
+    return <BrickBreakerGame onCompleteGame={handleEnterBirthday} />;
   }
 
   return (
