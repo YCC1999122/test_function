@@ -4,23 +4,28 @@ import { useGameAudio } from './GameAudio';
 
 const W = 800;
 const H = 500;
-const PADDLE_W = 120;
+const PADDLE_W = 100;
 const PADDLE_H = 16;
 const PADDLE_Y = H - 45;
-const BALL_R = 8;
-const BALL_SPEED = 6.2;
-const MAX_BALL_SPEED = 12;
+const PADDLE_MAX_W = 210;
+const BALL_R = 7;
+const BALL_SPEED = 6.5;
+const MAX_BALL_SPEED = 13;
 const LIVES = 3;
 
-const BRICK_COLS = 8;
-const BRICK_ROWS = 5;
-const BRICK_W = 84;
-const BRICK_H = 22;
-const BRICK_GAP = 6;
-const BRICK_TOP = 60;
-const BRICK_LEFT = (W - (BRICK_COLS * BRICK_W + (BRICK_COLS - 1) * BRICK_GAP)) / 2;
+// 砖块网格（约 200 块）
+const GRID_COLS = 16;
+const GRID_ROWS = 13;
+const BRICK_W = 42;
+const BRICK_H = 20;
+const BRICK_GAP = 4;
+const BRICK_TOP = 55;
+const BRICK_LEFT = (W - (GRID_COLS * BRICK_W + (GRID_COLS - 1) * BRICK_GAP)) / 2;
 
-const ROW_COLORS = ['#38bdf8', '#818cf8', '#a78bfa', '#f472b6', '#fbbf24'];
+const FRAGILE_COLORS = ['#38bdf8', '#818cf8', '#a78bfa', '#f472b6', '#fb7185'];
+const HARD_COLOR = '#475569';
+
+type PowerUpType = 'multiball' | 'double' | 'widen';
 
 interface Brick {
   x: number;
@@ -31,12 +36,20 @@ interface Brick {
   color: string;
   hp: number;
   maxHp: number;
+  hard: boolean;
 }
 
 interface Ball {
   x: number;
   y: number;
   vx: number;
+  vy: number;
+}
+
+interface PowerUp {
+  x: number;
+  y: number;
+  type: PowerUpType;
   vy: number;
 }
 
@@ -59,8 +72,9 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
   const [scale, setScale] = useState(1);
 
   const paddleRef = useRef({ x: W / 2 - PADDLE_W / 2, y: PADDLE_Y, w: PADDLE_W, h: PADDLE_H });
-  const ballRef = useRef<Ball>({ x: W / 2, y: PADDLE_Y - BALL_R - 5, vx: 0, vy: 0 });
+  const ballsRef = useRef<Ball[]>([]);
   const bricksRef = useRef<Brick[]>([]);
+  const powerUpsRef = useRef<PowerUp[]>([]);
   const particlesRef = useRef<Particle[]>([]);
   const scoreRef = useRef(0);
   const livesRef = useRef(LIVES);
@@ -68,6 +82,7 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
   const mouseRef = useRef(W / 2);
   const gameStateRef = useRef(gameState);
   const ballStuckRef = useRef(true);
+  const widenTimerRef = useRef(0);
 
   const { hit, star, victory, select, pop } = useGameAudio();
 
@@ -85,20 +100,25 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
     return () => window.removeEventListener('resize', updateScale);
   }, []);
 
+  // 要塞布局：外层坚硬砖块包裹内层易碎砖块，底部中央留一条小道
   const createBricks = useCallback((): Brick[] => {
     const bricks: Brick[] = [];
-    for (let row = 0; row < BRICK_ROWS; row++) {
-      for (let col = 0; col < BRICK_COLS; col++) {
-        const hp = row >= BRICK_ROWS - 2 ? 2 : 1; // 底部两排需 2 次击打
+    for (let row = 0; row < GRID_ROWS; row++) {
+      for (let col = 0; col < GRID_COLS; col++) {
+        const isShell = row === 0 || row === GRID_ROWS - 1 || col === 0 || col === GRID_COLS - 1;
+        const isEntrance = row === GRID_ROWS - 1 && (col === 7 || col === 8);
+        if (isEntrance) continue; // 底部入口缺口
+        const hard = isShell;
         bricks.push({
           x: BRICK_LEFT + col * (BRICK_W + BRICK_GAP),
           y: BRICK_TOP + row * (BRICK_H + BRICK_GAP),
           w: BRICK_W,
           h: BRICK_H,
           alive: true,
-          color: ROW_COLORS[row],
-          hp,
-          maxHp: hp,
+          color: hard ? HARD_COLOR : FRAGILE_COLORS[row % FRAGILE_COLORS.length],
+          hp: hard ? 3 : 1,
+          maxHp: hard ? 3 : 1,
+          hard,
         });
       }
     }
@@ -106,28 +126,57 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
   }, []);
 
   const resetBall = useCallback(() => {
-    const ball = ballRef.current;
-    ball.x = W / 2;
-    ball.y = PADDLE_Y - BALL_R - 5;
-    ball.vx = 0;
-    ball.vy = 0;
+    ballsRef.current = [{ x: W / 2, y: PADDLE_Y - BALL_R - 5, vx: 0, vy: 0 }];
     ballStuckRef.current = true;
   }, []);
 
   const launchBall = useCallback(() => {
     if (!ballStuckRef.current) return;
     ballStuckRef.current = false;
-    const ball = ballRef.current;
+    const ball = ballsRef.current[0];
     ball.vx = (Math.random() - 0.5) * 4;
     ball.vy = -BALL_SPEED;
+  }, []);
+
+  const spawnPowerUp = useCallback((x: number, y: number) => {
+    const r = Math.random();
+    let type: PowerUpType;
+    if (r < 0.4) type = 'multiball';
+    else if (r < 0.6) type = 'double';
+    else type = 'widen';
+    powerUpsRef.current.push({ x, y, type, vy: 2.2 });
+  }, []);
+
+  const applyPowerUp = useCallback((type: PowerUpType) => {
+    const paddle = paddleRef.current;
+    if (type === 'widen') {
+      paddle.w = Math.min(PADDLE_MAX_W, paddle.w + 60);
+      widenTimerRef.current = 600; // 10 秒后恢复
+    } else if (type === 'multiball') {
+      ballsRef.current.push({
+        x: paddle.x + paddle.w / 2,
+        y: paddle.y - BALL_R - 5,
+        vx: (Math.random() - 0.5) * 5,
+        vy: -BALL_SPEED,
+      });
+    } else if (type === 'double') {
+      const cur = ballsRef.current;
+      const clones: Ball[] = [];
+      for (const b of cur) {
+        clones.push({ x: b.x, y: b.y, vx: -b.vx, vy: b.vy });
+      }
+      for (const c of clones) ballsRef.current.push(c);
+    }
   }, []);
 
   const initGame = useCallback(() => {
     paddleRef.current = { x: W / 2 - PADDLE_W / 2, y: PADDLE_Y, w: PADDLE_W, h: PADDLE_H };
     bricksRef.current = createBricks();
+    powerUpsRef.current = [];
     particlesRef.current = [];
     scoreRef.current = 0;
     livesRef.current = LIVES;
+    widenTimerRef.current = 0;
     setScore(0);
     setLives(LIVES);
     resetBall();
@@ -161,12 +210,13 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
       if (gameStateRef.current !== 'playing') return;
 
       const paddle = paddleRef.current;
-      const ball = ballRef.current;
+      const balls = ballsRef.current;
       const bricks = bricksRef.current;
+      const powerUps = powerUpsRef.current;
       const particles = particlesRef.current;
       const keys = keysRef.current;
 
-      // ── Paddle control ──
+      // ── 挡板控制 ──
       let dir = 0;
       if (keys.has('arrowleft') || keys.has('a')) dir = -1;
       if (keys.has('arrowright') || keys.has('d')) dir = 1;
@@ -177,10 +227,16 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
       }
       paddle.x = Math.max(0, Math.min(W - paddle.w, paddle.x));
 
-      // ── Ball (stuck to paddle until launch) ──
+      // 加宽计时恢复
+      if (widenTimerRef.current > 0) {
+        widenTimerRef.current--;
+        if (widenTimerRef.current <= 0) paddle.w = PADDLE_W;
+      }
+
+      // ── 发球 ──
       if (ballStuckRef.current) {
-        ball.x = paddle.x + paddle.w / 2;
-        ball.y = paddle.y - BALL_R - 5;
+        balls[0].x = paddle.x + paddle.w / 2;
+        balls[0].y = paddle.y - BALL_R - 5;
         if (keys.has(' ') || keys.has('arrowup') || keys.has('w')) {
           keys.delete(' ');
           keys.delete('arrowup');
@@ -188,17 +244,85 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
           launchBall();
         }
       } else {
-        // ── Ball movement ──
-        ball.x += ball.vx;
-        ball.y += ball.vy;
+        // ── 球更新 ──
+        for (let bi = balls.length - 1; bi >= 0; bi--) {
+          const ball = balls[bi];
+          ball.x += ball.vx;
+          ball.y += ball.vy;
 
-        // Wall bounce
-        if (ball.x < BALL_R) { ball.x = BALL_R; ball.vx = Math.abs(ball.vx); }
-        if (ball.x > W - BALL_R) { ball.x = W - BALL_R; ball.vx = -Math.abs(ball.vx); }
-        if (ball.y < BALL_R) { ball.y = BALL_R; ball.vy = Math.abs(ball.vy); }
+          // 墙壁反弹
+          if (ball.x < BALL_R) { ball.x = BALL_R; ball.vx = Math.abs(ball.vx); }
+          if (ball.x > W - BALL_R) { ball.x = W - BALL_R; ball.vx = -Math.abs(ball.vx); }
+          if (ball.y < BALL_R) { ball.y = BALL_R; ball.vy = Math.abs(ball.vy); }
 
-        // Bottom → lose life
-        if (ball.y > H + BALL_R) {
+          // 掉落 → 移除球
+          if (ball.y > H + BALL_R) {
+            balls.splice(bi, 1);
+            continue;
+          }
+
+          // 挡板碰撞
+          if (
+            ball.vy > 0 &&
+            ball.y + BALL_R >= paddle.y &&
+            ball.y + BALL_R <= paddle.y + paddle.h + 8 &&
+            ball.x >= paddle.x - BALL_R &&
+            ball.x <= paddle.x + paddle.w + BALL_R
+          ) {
+            const hitPos = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
+            const angle = Math.max(-1, Math.min(1, hitPos)) * (Math.PI / 3);
+            const speed = Math.min(
+              Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy) + 0.25,
+              MAX_BALL_SPEED
+            );
+            ball.vx = speed * Math.sin(angle);
+            ball.vy = -speed * Math.cos(angle);
+            ball.y = paddle.y - BALL_R;
+            hit();
+          }
+
+          // 砖块碰撞
+          for (const brick of bricks) {
+            if (!brick.alive) continue;
+            if (
+              ball.x + BALL_R > brick.x &&
+              ball.x - BALL_R < brick.x + brick.w &&
+              ball.y + BALL_R > brick.y &&
+              ball.y - BALL_R < brick.y + brick.h
+            ) {
+              const overlapLeft = ball.x + BALL_R - brick.x;
+              const overlapRight = brick.x + brick.w - (ball.x - BALL_R);
+              const overlapTop = ball.y + BALL_R - brick.y;
+              const overlapBottom = brick.y + brick.h - (ball.y - BALL_R);
+              const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+              if (minOverlap === overlapLeft || minOverlap === overlapRight) {
+                ball.vx = -ball.vx;
+              } else {
+                ball.vy = -ball.vy;
+              }
+
+              brick.hp--;
+              if (brick.hp <= 0) {
+                brick.alive = false;
+                scoreRef.current += brick.hard ? 30 : 10;
+                setScore(scoreRef.current);
+                spawnParticles(brick.x + brick.w / 2, brick.y + brick.h / 2, brick.color, 10);
+                // 掉落 buff
+                const dropChance = brick.hard ? 0.28 : 0.1;
+                if (Math.random() < dropChance) {
+                  spawnPowerUp(brick.x + brick.w / 2, brick.y + brick.h / 2);
+                }
+                hit();
+              } else {
+                spawnParticles(brick.x + brick.w / 2, brick.y + brick.h / 2, '#94a3b8', 3);
+              }
+              break;
+            }
+          }
+        }
+
+        // 所有球掉落 → 扣命
+        if (balls.length === 0) {
           livesRef.current--;
           setLives(livesRef.current);
           pop();
@@ -209,72 +333,38 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
           }
           resetBall();
         }
-
-        // Paddle collision
-        if (
-          ball.vy > 0 &&
-          ball.y + BALL_R >= paddle.y &&
-          ball.y + BALL_R <= paddle.y + paddle.h + 8 &&
-          ball.x >= paddle.x - BALL_R &&
-          ball.x <= paddle.x + paddle.w + BALL_R
-        ) {
-          const hitPos = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
-          const angle = Math.max(-1, Math.min(1, hitPos)) * (Math.PI / 3);
-          const speed = Math.min(
-            Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy) + 0.3,
-            MAX_BALL_SPEED
-          );
-          ball.vx = speed * Math.sin(angle);
-          ball.vy = -speed * Math.cos(angle);
-          ball.y = paddle.y - BALL_R;
-          hit();
-        }
-
-        // Brick collision
-        for (const brick of bricks) {
-          if (!brick.alive) continue;
-          if (
-            ball.x + BALL_R > brick.x &&
-            ball.x - BALL_R < brick.x + brick.w &&
-            ball.y + BALL_R > brick.y &&
-            ball.y - BALL_R < brick.y + brick.h
-          ) {
-            // Determine bounce side
-            const overlapLeft = ball.x + BALL_R - brick.x;
-            const overlapRight = brick.x + brick.w - (ball.x - BALL_R);
-            const overlapTop = ball.y + BALL_R - brick.y;
-            const overlapBottom = brick.y + brick.h - (ball.y - BALL_R);
-            const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-            if (minOverlap === overlapLeft || minOverlap === overlapRight) {
-              ball.vx = -ball.vx;
-            } else {
-              ball.vy = -ball.vy;
-            }
-
-            brick.hp--;
-            if (brick.hp <= 0) {
-              brick.alive = false;
-              scoreRef.current += 10;
-              setScore(scoreRef.current);
-              spawnParticles(brick.x + brick.w / 2, brick.y + brick.h / 2, brick.color, 10);
-              hit();
-            } else {
-              spawnParticles(brick.x + brick.w / 2, brick.y + brick.h / 2, brick.color, 4);
-            }
-            break;
-          }
-        }
-
-        // Win check
-        if (!bricks.some((b) => b.alive)) {
-          victory();
-          gameStateRef.current = 'victory';
-          setGameState('victory');
-          return;
-        }
       }
 
-      // ── Particles ──
+      // ── 掉落物更新 ──
+      for (let i = powerUps.length - 1; i >= 0; i--) {
+        const pu = powerUps[i];
+        pu.y += pu.vy;
+        // 挡板接住
+        if (
+          pu.y + 12 >= paddle.y &&
+          pu.y <= paddle.y + paddle.h &&
+          pu.x >= paddle.x &&
+          pu.x <= paddle.x + paddle.w
+        ) {
+          powerUps.splice(i, 1);
+          applyPowerUp(pu.type);
+          star();
+          spawnParticles(pu.x, paddle.y, '#fbbf24', 12);
+          continue;
+        }
+        // 落出屏幕
+        if (pu.y > H + 20) powerUps.splice(i, 1);
+      }
+
+      // ── 胜利判定 ──
+      if (!bricks.some((b) => b.alive)) {
+        victory();
+        gameStateRef.current = 'victory';
+        setGameState('victory');
+        return;
+      }
+
+      // ── 粒子更新 ──
       for (let i = particles.length - 1; i >= 0; i--) {
         const pt = particles[i];
         pt.x += pt.vx;
@@ -284,39 +374,64 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
         if (pt.life <= 0) particles.splice(i, 1);
       }
 
-      // ── Render ──
+      // ── 渲染 ──
       ctx.clearRect(0, 0, W, H);
 
-      // Background
       const bg = ctx.createLinearGradient(0, 0, 0, H);
       bg.addColorStop(0, '#0b2545');
       bg.addColorStop(1, '#1e1b4b');
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, W, H);
 
-      // Bricks
+      // 砖块
       for (const brick of bricks) {
         if (!brick.alive) continue;
-        const grad = ctx.createLinearGradient(brick.x, brick.y, brick.x, brick.y + brick.h);
-        grad.addColorStop(0, brick.color);
-        grad.addColorStop(1, '#1e1b4b');
-        ctx.fillStyle = grad;
-        ctx.fillRect(brick.x, brick.y, brick.w, brick.h);
-        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(brick.x, brick.y, brick.w, brick.h);
-        // 2HP bricks show crack
-        if (brick.maxHp === 2 && brick.hp === 1) {
-          ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        if (brick.hard) {
+          // 坚硬砖块：金属质感
+          const g = ctx.createLinearGradient(brick.x, brick.y, brick.x, brick.y + brick.h);
+          g.addColorStop(0, '#64748b');
+          g.addColorStop(1, '#334155');
+          ctx.fillStyle = g;
+          ctx.fillRect(brick.x, brick.y, brick.w, brick.h);
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(brick.x, brick.y, brick.w, brick.h);
+          // 铆钉
+          ctx.fillStyle = '#cbd5e1';
+          ctx.fillRect(brick.x + 4, brick.y + 4, 3, 3);
+          ctx.fillRect(brick.x + brick.w - 7, brick.y + 4, 3, 3);
+          ctx.fillRect(brick.x + 4, brick.y + brick.h - 7, 3, 3);
+          ctx.fillRect(brick.x + brick.w - 7, brick.y + brick.h - 7, 3, 3);
+        } else {
+          const g = ctx.createLinearGradient(brick.x, brick.y, brick.x, brick.y + brick.h);
+          g.addColorStop(0, brick.color);
+          g.addColorStop(1, '#1e1b4b');
+          ctx.fillStyle = g;
+          ctx.fillRect(brick.x, brick.y, brick.w, brick.h);
+          ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(brick.x, brick.y, brick.w, brick.h);
+        }
+        // 裂纹（受击后）
+        if (brick.hp < brick.maxHp) {
+          ctx.strokeStyle = brick.hard ? '#f8fafc' : 'rgba(255,255,255,0.7)';
+          ctx.lineWidth = 1.5;
           ctx.beginPath();
           ctx.moveTo(brick.x + brick.w * 0.3, brick.y);
-          ctx.lineTo(brick.x + brick.w * 0.5, brick.y + brick.h * 0.5);
-          ctx.lineTo(brick.x + brick.w * 0.3, brick.y + brick.h);
+          ctx.lineTo(brick.x + brick.w * 0.55, brick.y + brick.h * 0.5);
+          ctx.lineTo(brick.x + brick.w * 0.35, brick.y + brick.h);
           ctx.stroke();
+          if (brick.hp < brick.maxHp - 1) {
+            ctx.beginPath();
+            ctx.moveTo(brick.x + brick.w * 0.7, brick.y);
+            ctx.lineTo(brick.x + brick.w * 0.5, brick.y + brick.h * 0.5);
+            ctx.lineTo(brick.x + brick.w * 0.75, brick.y + brick.h);
+            ctx.stroke();
+          }
         }
       }
 
-      // Particles
+      // 粒子
       for (const pt of particles) {
         const alpha = pt.life / pt.maxLife;
         ctx.globalAlpha = alpha;
@@ -327,7 +442,25 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
       }
       ctx.globalAlpha = 1;
 
-      // Paddle
+      // 掉落物
+      for (const pu of powerUps) {
+        const color = pu.type === 'multiball' ? '#38bdf8' : pu.type === 'double' ? '#22c55e' : '#f97316';
+        ctx.save();
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(pu.x, pu.y, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(pu.type === 'multiball' ? '+' : pu.type === 'double' ? 'x2' : '宽', pu.x, pu.y + 4);
+        ctx.textAlign = 'left';
+      }
+
+      // 挡板
       ctx.save();
       ctx.shadowColor = '#38bdf8';
       ctx.shadowBlur = 12;
@@ -338,19 +471,21 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
       ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
       ctx.restore();
 
-      // Ball
-      ctx.save();
-      ctx.shadowColor = '#fbbf24';
-      ctx.shadowBlur = 18;
-      const bGrad = ctx.createRadialGradient(ball.x - 2, ball.y - 2, 1, ball.x, ball.y, BALL_R);
-      bGrad.addColorStop(0, '#ffffff');
-      bGrad.addColorStop(0.5, '#fbbf24');
-      bGrad.addColorStop(1, '#d97706');
-      ctx.fillStyle = bGrad;
-      ctx.beginPath();
-      ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+      // 球
+      for (const ball of balls) {
+        ctx.save();
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 18;
+        const bGrad = ctx.createRadialGradient(ball.x - 2, ball.y - 2, 1, ball.x, ball.y, BALL_R);
+        bGrad.addColorStop(0, '#ffffff');
+        bGrad.addColorStop(0.5, '#fbbf24');
+        bGrad.addColorStop(1, '#d97706');
+        ctx.fillStyle = bGrad;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
 
       // HUD
       ctx.fillStyle = '#fff';
@@ -361,7 +496,6 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
       ctx.fillText('生命: ' + '❤'.repeat(Math.max(0, livesRef.current)), W - 20, 32);
       ctx.textAlign = 'left';
 
-      // Launch hint
       if (ballStuckRef.current) {
         ctx.fillStyle = '#fff';
         ctx.font = '16px monospace';
@@ -375,7 +509,7 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
 
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [gameState, launchBall, resetBall, hit, star, victory, pop]);
+  }, [gameState, launchBall, resetBall, spawnPowerUp, applyPowerUp, hit, star, victory, pop]);
 
   // Input
   useEffect(() => {
@@ -420,7 +554,7 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
         <h1 className="text-2xl font-bold text-white mb-1 flex items-center justify-center gap-2">
           <span className="text-yellow-400">🧱</span> 弹珠打砖块
         </h1>
-        <p className="text-slate-400 text-sm">鼠标或方向键移动挡板 · 打碎所有砖块过关</p>
+        <p className="text-slate-400 text-sm">攻破外层坚硬砖块 · 打碎全部砖块过关 · 接住掉落 Buff</p>
       </div>
 
       <div className="relative">
@@ -441,7 +575,8 @@ const BrickBreakerGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded-2xl">
             <div className="text-5xl mb-4">🧱</div>
             <h2 className="text-3xl font-bold text-white mb-2">弹珠打砖块</h2>
-            <p className="text-slate-300 mb-4 text-sm">移动挡板反弹弹珠，打碎全部砖块</p>
+            <p className="text-slate-300 mb-1 text-sm">约 200 块砖，外层坚硬包裹内层易碎</p>
+            <p className="text-slate-400 mb-4 text-sm">击碎砖块掉落 Buff：球分身 / 球翻倍 / 挡板变长</p>
             <button
               onClick={() => {
                 select();
