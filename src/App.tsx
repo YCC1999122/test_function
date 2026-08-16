@@ -17,7 +17,7 @@ type View = 'game1' | 'game2' | 'game3' | 'game4' | 'game5' | 'birthday';
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('game1');
 
-  // game1: 冰球对战 → game2: 迷宫探险
+  // game1: 弹珠打砖块 → game2: 迷宫探险
   const handleEnterLevel2 = () => {
     setCurrentView('game2');
   };
@@ -32,12 +32,12 @@ export default function App() {
     setCurrentView('game4');
   };
 
-  // game4: 平台跳跃 → game5: 弹珠打砖块
+  // game4: 平台跳跃 → game5: 冰球对战
   const handleEnterLevel5 = () => {
     setCurrentView('game5');
   };
 
-  // game5: 弹珠打砖块 → 生日祝福
+  // game5: 冰球对战 → 生日祝福
   const handleEnterBirthday = () => {
     setCurrentView('birthday');
   };
@@ -47,7 +47,7 @@ export default function App() {
   };
 
   if (currentView === 'game1') {
-    return <HockeyGame onCompleteGame={handleEnterLevel2} />;
+    return <BrickBreakerGame onCompleteGame={handleEnterLevel2} />;
   }
 
   if (currentView === 'game2') {
@@ -63,7 +63,7 @@ export default function App() {
   }
 
   if (currentView === 'game5') {
-    return <BrickBreakerGame onCompleteGame={handleEnterBirthday} />;
+    return <HockeyGame onCompleteGame={handleEnterBirthday} />;
   }
 
   return (
