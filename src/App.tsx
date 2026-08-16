@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import BeatEmUpWrapper from './components/BeatEmUpWrapper';
+import HockeyGame from './components/HockeyGame';
 import PlatformGame from './components/PlatformGame';
 import MazeGame from './components/MazeGame';
 import FPSGame from './components/FPSGame';
@@ -16,7 +16,7 @@ type View = 'game1' | 'game2' | 'game3' | 'game4' | 'birthday';
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('game1');
 
-  // game1: 横板格斗闯关 → game2: 迷宫探险
+  // game1: 冰球对战 → game2: 迷宫探险
   const handleEnterLevel2 = () => {
     setCurrentView('game2');
   };
@@ -41,7 +41,7 @@ export default function App() {
   };
 
   if (currentView === 'game1') {
-    return <BeatEmUpWrapper onCompleteGame={handleEnterLevel2} />;
+    return <HockeyGame onCompleteGame={handleEnterLevel2} />;
   }
 
   if (currentView === 'game2') {
