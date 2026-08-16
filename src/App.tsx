@@ -4,6 +4,7 @@ import PlatformGame from './components/PlatformGame';
 import MazeGame from './components/MazeGame';
 import FPSGame from './components/FPSGame';
 import BrickBreakerGame from './components/BrickBreakerGame';
+import TowerDefenseGame from './components/TowerDefenseGame';
 import ParticleBackground from './components/ParticleBackground';
 import HeroSection from './components/HeroSection';
 import Countdown from './components/Countdown';
@@ -12,10 +13,15 @@ import WishMessage from './components/WishMessage';
 import MusicPlayer from './components/MusicPlayer';
 import ShareButton from './components/ShareButton';
 
-type View = 'game1' | 'game2' | 'game3' | 'game4' | 'game5' | 'birthday';
+type View = 'game6' | 'game1' | 'game2' | 'game3' | 'game4' | 'game5' | 'birthday';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<View>('game1');
+  const [currentView, setCurrentView] = useState<View>('game6');
+
+  // game6: 激光塔防 → game1: 弹珠打砖块
+  const handleEnterLevel1 = () => {
+    setCurrentView('game1');
+  };
 
   // game1: 弹珠打砖块 → game2: 迷宫探险
   const handleEnterLevel2 = () => {
@@ -43,8 +49,12 @@ export default function App() {
   };
 
   const handleBackToGame = () => {
-    setCurrentView('game1');
+    setCurrentView('game6');
   };
+
+  if (currentView === 'game6') {
+    return <TowerDefenseGame onCompleteGame={handleEnterLevel1} />;
+  }
 
   if (currentView === 'game1') {
     return <BrickBreakerGame onCompleteGame={handleEnterLevel2} />;
