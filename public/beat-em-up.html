@@ -958,7 +958,7 @@ function update(){
   if(!cutscene2Done&&p.x>1000&&enemies.filter(e=>e.alive&&e.type!=='boss').length<=3){
     cutscene2Done=true;triggerCutscene(1);spawnWave2();
   }
-  if(!cutscene3Done&&p.x>1800&&enemies.some(e=>e.type==='boss'&&e.alive)){
+  if(!cutscene3Done&&p.x>1800){
     cutscene3Done=true;triggerCutscene(2);
   }
 
