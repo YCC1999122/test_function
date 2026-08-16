@@ -5,12 +5,13 @@ import { useGameAudio } from './GameAudio';
 const W = 800;
 const H = 500;
 const CELL = 40;
-const PATH_HALF = 22;
+const PATH_HALF = 18;
+const MAX_TOWERS = 12;
 
-// 蛇形曲折路径（入口左侧 → 终点右侧）
+// 蛇形曲折路径（入口左侧 → 终点右侧，多转弯）
 const WAYPOINTS: [number, number][] = [
-  [-30, 75], [640, 75], [640, 175], [160, 175], [160, 275],
-  [640, 275], [640, 375], [160, 375], [160, 430], [790, 430],
+  [-30, 55], [620, 55], [620, 135], [180, 135], [180, 215], [620, 215], [620, 295],
+  [180, 295], [180, 375], [620, 375], [620, 455], [790, 455],
 ];
 
 interface Seg { x1: number; y1: number; x2: number; y2: number; dx: number; dy: number; len: number; }
@@ -52,13 +53,28 @@ function isOnPath(x: number, y: number) {
   return false;
 }
 
+// 障碍物（墙体装饰，阻挡放置）
+const OBSTACLES: { x: number; y: number; w: number; h: number }[] = [
+  { x: 700, y: 95, w: 36, h: 36 },
+  { x: 100, y: 175, w: 36, h: 36 },
+  { x: 700, y: 255, w: 36, h: 36 },
+  { x: 100, y: 335, w: 36, h: 36 },
+  { x: 700, y: 415, w: 36, h: 36 },
+];
+
+function inObstacle(x: number, y: number) {
+  return OBSTACLES.some((o) =>
+    x > o.x - o.w / 2 && x < o.x + o.w / 2 && y > o.y - o.h / 2 && y < o.y + o.h / 2
+  );
+}
+
 // 塔可放置的墙体网格点
 const VALID_POINTS: { x: number; y: number }[] = [];
 for (let cy = 0; cy < 12; cy++) {
   for (let cx = 0; cx < 20; cx++) {
     const x = 20 + cx * CELL;
     const y = 20 + cy * CELL;
-    if (!isOnPath(x, y)) VALID_POINTS.push({ x, y });
+    if (!isOnPath(x, y) && !inObstacle(x, y)) VALID_POINTS.push({ x, y });
   }
 }
 
@@ -80,6 +96,11 @@ interface Tower {
   x: number; y: number;
   type: TowerType;
   cooldown: number;
+}
+
+interface Connection {
+  a: number;
+  b: number;
 }
 
 interface Monster {
@@ -126,6 +147,8 @@ const TowerDefenseGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
   const monstersRef = useRef<Monster[]>([]);
   const beamsRef = useRef<Beam[]>([]);
   const particlesRef = useRef<Particle[]>([]);
+  const connectionsRef = useRef<Connection[]>([]);
+  const dragConnRef = useRef<{ from: number; x: number; y: number } | null>(null);
   const moneyRef = useRef(100);
   const livesRef = useRef(10);
   const phaseRef = useRef<Phase>('menu');
@@ -161,6 +184,8 @@ const TowerDefenseGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
     monstersRef.current = [];
     beamsRef.current = [];
     particlesRef.current = [];
+    connectionsRef.current = [];
+    dragConnRef.current = null;
     moneyRef.current = 100;
     livesRef.current = 10;
     spawnQueueRef.current = buildWave();
@@ -244,8 +269,13 @@ const TowerDefenseGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
         }
       }
 
+      // 相连塔集合（连线加成）
+      const connectedSet = new Set<number>();
+      for (const c of connectionsRef.current) { connectedSet.add(c.a); connectedSet.add(c.b); }
+
       // ── 塔攻击 ──
-      for (const t of towers) {
+      for (let ti = 0; ti < towers.length; ti++) {
+        const t = towers[ti];
         if (t.cooldown > 0) t.cooldown--;
         const stats = TOWER_STATS[t.type];
         let target: Monster | null = null;
@@ -257,7 +287,8 @@ const TowerDefenseGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
           if (d < stats.range && d < minD) { minD = d; target = m; }
         }
         if (target && t.cooldown <= 0) {
-          t.cooldown = stats.cd;
+          // 连线塔攻速 +20%
+          t.cooldown = connectedSet.has(ti) ? Math.floor(stats.cd * 0.8) : stats.cd;
           const tp = posAtDist(target.dist);
           target.hp -= stats.damage;
           if (t.type === 'blue') target.slowTimer = 90;
@@ -336,27 +367,56 @@ const TowerDefenseGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
       ctx.fillStyle = '#4ade80';
       ctx.font = 'bold 14px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('▶ 入口', 40, 55);
+      ctx.fillText('▶ 入口', 40, 40);
       ctx.fillStyle = '#f87171';
-      ctx.fillText('终点 ◀', 755, 410);
+      ctx.fillText('终点 ◀', 755, 435);
       ctx.textAlign = 'left';
 
-      // ── 相邻塔连线激光 ──
-      for (let i = 0; i < towers.length; i++) {
-        for (let j = i + 1; j < towers.length; j++) {
-          const a = towers[i], b = towers[j];
-          const d = Math.hypot(a.x - b.x, a.y - b.y);
-          if (d <= CELL * 1.6) {
-            const pulse = 0.5 + 0.5 * Math.sin(frameRef.current * 0.1 + i + j);
-            const color = a.type === b.type ? TOWER_STATS[a.type].color : '#e879f9';
-            ctx.save();
-            ctx.globalAlpha = 0.25 + pulse * 0.45;
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-            ctx.restore();
-          }
-        }
+      // 障碍物
+      for (const o of OBSTACLES) {
+        const g = ctx.createLinearGradient(o.x - o.w / 2, o.y - o.h / 2, o.x, o.y + o.h / 2);
+        g.addColorStop(0, '#78350f');
+        g.addColorStop(1, '#451a03');
+        ctx.fillStyle = g;
+        ctx.fillRect(o.x - o.w / 2, o.y - o.h / 2, o.w, o.h);
+        ctx.strokeStyle = '#b45309';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(o.x - o.w / 2, o.y - o.h / 2, o.w, o.h);
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(o.x - o.w / 2, o.y - o.h / 2);
+        ctx.lineTo(o.x + o.w / 2, o.y + o.h / 2);
+        ctx.moveTo(o.x + o.w / 2, o.y - o.h / 2);
+        ctx.lineTo(o.x - o.w / 2, o.y + o.h / 2);
+        ctx.stroke();
+      }
+
+      // ── 塔连线光纤 ──
+      for (const c of connectionsRef.current) {
+        const a = towers[c.a], b = towers[c.b];
+        if (!a || !b) continue;
+        const pulse = 0.5 + 0.5 * Math.sin(frameRef.current * 0.1 + c.a + c.b);
+        const color = a.type === b.type ? TOWER_STATS[a.type].color : '#e879f9';
+        ctx.save();
+        ctx.globalAlpha = 0.4 + pulse * 0.5;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 6;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        ctx.restore();
+      }
+
+      // 拖动连接预览
+      if (dragConnRef.current && towers[dragConnRef.current.from]) {
+        const a = towers[dragConnRef.current.from];
+        ctx.save();
+        ctx.setLineDash([6, 4]);
+        ctx.strokeStyle = '#e879f9';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(dragConnRef.current.x, dragConnRef.current.y); ctx.stroke();
+        ctx.restore();
       }
 
       // ── 塔 ──
@@ -466,6 +526,7 @@ const TowerDefenseGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
       if (d < nd) { nd = d; nearest = vp; }
     }
     const stats = TOWER_STATS[selected];
+    if (towersRef.current.length >= MAX_TOWERS) return;
     if (nearest && nd < 26 && moneyRef.current >= stats.cost) {
       towersRef.current.push({ x: nearest.x, y: nearest.y, type: selected, cooldown: 0 });
       moneyRef.current -= stats.cost;
@@ -474,27 +535,68 @@ const TowerDefenseGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
     }
   }, [scale, selected, select]);
 
-  // 鼠标移动（预览）
+  // 鼠标交互：左键放置、右键拖动连接
   useEffect(() => {
-    const handleMove = (e: MouseEvent) => {
+    const toCanvas = (e: MouseEvent) => {
       const canvas = canvasRef.current;
-      if (!canvas) return;
+      if (!canvas) return { x: 0, y: 0 };
       const rect = canvas.getBoundingClientRect();
-      mouseRef.current = {
-        x: (e.clientX - rect.left) / scale,
-        y: (e.clientY - rect.top) / scale,
-      };
+      return { x: (e.clientX - rect.left) / scale, y: (e.clientY - rect.top) / scale };
     };
-    const handleClick = (e: MouseEvent) => {
-      placeTower(e.clientX, e.clientY);
+    const findTowerAt = (x: number, y: number) => {
+      for (let i = 0; i < towersRef.current.length; i++) {
+        const t = towersRef.current[i];
+        if (Math.hypot(t.x - x, t.y - y) < 16) return i;
+      }
+      return -1;
     };
+    const handleMove = (e: MouseEvent) => {
+      const p = toCanvas(e);
+      mouseRef.current = p;
+      if (dragConnRef.current) {
+        dragConnRef.current.x = p.x;
+        dragConnRef.current.y = p.y;
+      }
+    };
+    const handleDown = (e: MouseEvent) => {
+      if (e.button === 0) {
+        placeTower(e.clientX, e.clientY);
+      } else if (e.button === 2) {
+        const p = toCanvas(e);
+        const idx = findTowerAt(p.x, p.y);
+        if (idx >= 0) dragConnRef.current = { from: idx, x: p.x, y: p.y };
+      }
+    };
+    const handleUp = (e: MouseEvent) => {
+      if (e.button === 2 && dragConnRef.current) {
+        const p = toCanvas(e);
+        const idx = findTowerAt(p.x, p.y);
+        if (idx >= 0 && idx !== dragConnRef.current.from) {
+          const from = dragConnRef.current.from;
+          const exists = connectionsRef.current.some(
+            (c) => (c.a === from && c.b === idx) || (c.a === idx && c.b === from)
+          );
+          if (!exists) {
+            connectionsRef.current.push({ a: from, b: idx });
+            select();
+          }
+        }
+        dragConnRef.current = null;
+      }
+    };
+    const handleContext = (e: MouseEvent) => e.preventDefault();
+
     window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mousedown', handleClick);
+    window.addEventListener('mousedown', handleDown);
+    window.addEventListener('mouseup', handleUp);
+    window.addEventListener('contextmenu', handleContext);
     return () => {
       window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mousedown', handleClick);
+      window.removeEventListener('mousedown', handleDown);
+      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('contextmenu', handleContext);
     };
-  }, [scale, placeTower]);
+  }, [scale, placeTower, select]);
 
   // 键盘：1=红塔 2=蓝塔
   useEffect(() => {
@@ -575,6 +677,7 @@ const TowerDefenseGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
               </div>
               <div className="text-yellow-400 font-bold text-sm">💰 {money}</div>
               <div className="text-red-400 font-bold text-sm">❤ {lives}</div>
+              <div className="text-cyan-300 font-bold text-sm">🏗️ {towersRef.current.length}/{MAX_TOWERS}</div>
               {phase === 'prepare' && (
                 <button
                   onClick={startWave}
@@ -586,8 +689,8 @@ const TowerDefenseGame = ({ onCompleteGame }: { onCompleteGame: () => void }) =>
             </div>
 
             {phase === 'prepare' && (
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-slate-300 text-xs bg-slate-900/70 px-3 py-1.5 rounded-full">
-                点击墙体放置塔（红=高伤 / 蓝=减速，数字键 1/2 切换），布置好点击「开始进攻」
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-slate-300 text-xs bg-slate-900/70 px-3 py-1.5 rounded-full text-center">
+                左键放塔（红=高伤 / 蓝=减速，数字键 1/2 切换）· 右键从塔拖到另一塔连接光纤
               </div>
             )}
           </>
